@@ -1,0 +1,192 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$tillikumIdsToCpCodes = array(
+    '84afa3f6f47f85df75b43079e27631e3' => 'BLS',
+    'acd76206873edd5cebacccad080be833' => 'BUX',
+    '01d978ab7c0b991d870a113b74a13bfe' => 'CAL',
+    '1dfae8555c5ee2f44b0ab58d7002a942' => 'CAU',
+    '59ef4021cee6f7899a8c1b2836511798' => 'FIN',
+    'bb26e1550776cd4dff15fdc2efaaa3ed' => 'HAL',
+    '8912d3a50dca52aa4e4da56a0a13cca9' => 'HAW',
+    '8e77483e370b96faa81a1957bb170e1d' => 'LLC',
+    'c205f5bf5ed04b411313a0d0c243c446' => 'MCN',
+    '39062811d089716e0b0df90d22b20553' => 'POL',
+    '81d77d5899076aa84bbde9bd89db3667' => 'SAC',
+    'd44573fea24db378d02efa71c9b1c33e' => 'WST', // Not a typo
+    '9cf5b6b133d681eecff90e465cb3707a' => 'WIL',
+    '91899c02ee2a7ea1c1af3cd5c2f4fed5' => 'WTH',
+);
+
+$cpDb = \Uhds_Db::factory('cp');
+
+$roomConfigs = $entityManager->createQuery(
+    "
+    SELECT rc
+    FROM Tillikum\Entity\Facility\Config\Room\Room rc
+    WHERE :now BETWEEN rc.start AND rc.end
+    "
+)
+    ->setParameter('now', new DateTime(date('Y-m-d')))
+    ->getResult();
+
+$tillikumList = array();
+foreach ($roomConfigs as $config) {
+    // Test that our building is something we care about exporting to CP
+    if (!array_key_exists($config->facility->facility_group->id, $tillikumIdsToCpCodes)) {
+        continue;
+    }
+
+    $cpRoom = array(
+        'code' => $tillikumIdsToCpCodes[$config->facility->facility_group->id],
+        'room' => $config->name,
+        'capacity' => $config->capacity,
+        'style' => ($config->suite || $config->type->id === 'APT') ? 'Suite' : 'Standard',
+        'type' => translateType($config),
+        'wing' => $config->section,
+        'floor' => translateFloor($config),
+        'cluster' => $config->suite ? $config->suite->name : null,
+        'gender' => $config->gender === 'U' ? null : $config->gender,
+        'tags' => translateTags($config)
+    );
+
+    $tillikumList[] = $cpRoom;
+}
+
+$localList = array();
+// DIX sleeping porches -- local only
+foreach (array('07', '08', '09', '10', '11', '12') as $dixNumber) {
+    $localList[] = array(
+        'code' => 'DIX',
+        'room' => $dixNumber,
+        'capacity' => 2,
+        'style' => 'Standard',
+        'type' => 'Coop',
+        'wing' => 'A',
+        'floor' => '2',
+        'cluster' => null,
+        'gender' => null,
+        'tags' => null
+    );
+}
+
+$roomList = array_merge(
+    $localList,
+    $tillikumList
+);
+
+usort(
+    $roomList,
+    function ($a, $b) {
+        return strnatcmp($a['code'] . $a['room'], $b['code'] . $b['room']);
+    }
+);
+
+$rowsProcessed = 0;
+$sortField = 1;
+
+$cpDb->beginTransaction();
+
+$cpDb->delete('RMLIST');
+foreach ($roomList as $entry) {
+    $cpDb->insert(
+        'RMLIST',
+        array(
+            'BUILDING_CODE' => $entry['code'],
+            'ROOM_NO' => $entry['room'],
+            'SORT_FIELD' => $sortField,
+            'ROOM_CAPACITY' => $entry['capacity'],
+            'ROOM_STYLE' => $entry['style'],
+            'ROOM_TYPE' => $entry['type'],
+            'WING' => $entry['wing'],
+            'FLOOR' => $entry['floor'],
+            'ROOM_CLUSTER' => $entry['cluster'],
+            'GENDER' => $entry['gender'],
+            'USER_01' => $entry['tags']
+        )
+    );
+
+    $rowsProcessed += 1;
+    $sortField += 1;
+}
+
+$cpDb->commit();
+
+syslog(LOG_INFO, "wrote {$rowsProcessed} rows to the Conference Programmer table RMLIST");
+closelog();
+
+function translateType($config)
+{
+    if ($config->type->id === 'APT') {
+        if ($config->capacity == 1) {
+            return 'Single';
+        } elseif ($config->capacity == 2) {
+            return 'Double';
+        } elseif ($config->capacity == 3) {
+            return 'Triple';
+        } elseif ($config->capacity == 4) {
+            return 'Quad';
+        } else {
+            return null;
+        }
+    }
+
+    if (strpos($config->type->id, 'SGL') !== false) {
+        return 'Single';
+    } elseif (strpos($config->type->id, 'DBL') !== false) {
+        return 'Double';
+    } elseif (strpos($config->type->id, 'TPL') !== false) {
+        return 'Triple';
+    } elseif (strpos($config->type->id, 'QUAD') !== false) {
+        return 'Quad';
+    } elseif (strpos($config->type->id, 'COOP') !== false) {
+        return 'Coop';
+    } else {
+        return null;
+    }
+}
+
+function translateTags($config)
+{
+    $ret = array();
+    foreach ($config->tags as $tag) {
+        $ret[] = $tag->name;
+    }
+
+    if (count($ret) > 0) {
+        $ret = implode(', ', $ret);
+    } else {
+        $ret = null;
+    }
+
+    return $ret;
+}
+
+function translateFloor($config)
+{
+    $ret = $config->floor;
+
+    if ($ret === 'G') {
+        $ret = 0;
+    }
+
+    return $ret;
+}

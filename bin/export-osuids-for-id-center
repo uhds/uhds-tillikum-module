@@ -1,0 +1,59 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+$getopt = new Console\Getopt(
+    array(
+        'o=s' => "output OSU IDs to this file (default: `-' for STDOUT)",
+    )
+);
+
+try {
+    $outputFile = strlen($getopt->o) > 0 ? $getopt->o : '-';
+} catch (Console\Exception\RuntimeException $e) {
+    echo $e->getUsageMessage();
+
+    exit(1);
+}
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$outputResource = $outputFile === '-' ? STDOUT : fopen($outputFile, 'wb');
+if (!$outputResource) {
+    exit(1);
+}
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$rows = $entityManager->createQuery(
+    "
+    SELECT p.osuid
+    FROM TillikumX\Entity\Person\Person p
+    JOIN p.bookings b
+    WHERE b.end >= :now AND LENGTH(p.osuid) > 0
+    "
+)
+    ->setParameter('now', new DateTime(date('Y-m-d')))
+    ->getResult();
+
+$osuidsWritten = 0;
+foreach ($rows as $row) {
+    fwrite($outputResource, "{$row['osuid']}\n");
+    $osuidsWritten += 1;
+}
+
+syslog(LOG_INFO, "wrote {$osuidsWritten} OSU IDs to {$outputFile}");
+closelog();

@@ -1,0 +1,115 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$commonDb = \Uhds_Db::factory('common');
+
+$currentPidms = $commonDb->fetchCol(
+    $commonDb->select()
+        ->from(array('p' => 'into_salesforce_person'), 'pidm')
+        ->join(
+            array('r' => 'into_salesforce_person_reservation'),
+            'p.osuid = r.person_osuid',
+            array()
+        )
+        ->where('r.end >= ?', date('Y-m-d'))
+        ->group('p.pidm')
+);
+
+$bookings = $entityManager->createQuery(
+    "
+    SELECT p.osuid,
+           b.start, b.end, b.checkin_at, b.updated_at,
+           rc.name rname,
+           t.name type,
+           fgc.name fgname
+    FROM TillikumX\Entity\Person\Person p
+    LEFT JOIN p.bookings b
+    LEFT JOIN Tillikum\Entity\Facility\Room\Room r WITH b.facility = r
+    LEFT JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH rc.facility = r AND (b.start BETWEEN rc.start AND rc.end)
+    LEFT JOIN rc.type t
+    LEFT JOIN r.facility_group fg
+    LEFT JOIN fg.configs fgc WITH (b.start BETWEEN fgc.start AND fgc.end)
+    WHERE p.pidm IN (:currentPidms)
+    "
+)
+    ->setParameter('currentPidms', $currentPidms)
+    ->getResult();
+
+fputcsv(
+    STDOUT,
+    array(
+        'OSU ID',
+        'Building',
+        'Room',
+        'Room type',
+        'Booking start',
+        'Booking end',
+        'Booking check-in',
+        'Updated at'
+    )
+);
+
+foreach ($bookings as $booking) {
+    $row = array($booking['osuid']);
+
+    if ($booking['start'] === null) {
+        $row = array_merge(
+            $row,
+            array(
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+            )
+        );
+    } elseif ($booking['start'] > new \DateTime(date('Y-m-d'))) {
+        $row = array_merge(
+            $row,
+            array(
+                'Pending',
+                'Pending',
+                'Pending',
+                'Pending',
+                'Pending',
+                'Pending',
+                date('Y-m-d H:i:s', $booking['updated_at']->format('U')),
+            )
+        );
+    } else {
+        $row = array_merge(
+            $row,
+            array(
+                $booking['fgname'],
+                $booking['rname'],
+                $booking['type'],
+                $booking['start']->format('Y-m-d'),
+                $booking['end']->format('Y-m-d'),
+                $booking['checkin_at'] ? date('Y-m-d H:i:s', $booking['checkin_at']->format('U')) : '',
+                date('Y-m-d H:i:s', $booking['updated_at']->format('U')),
+            )
+        );
+    }
+
+    fputcsv(STDOUT, $row);
+}

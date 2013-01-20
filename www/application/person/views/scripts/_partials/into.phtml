@@ -1,0 +1,64 @@
+<?php
+
+$i = $this->person->getIntoData();
+$p = $i['person'];
+$rs = $i['reservations'];
+
+usort($rs, function($a, $b) {
+    return strcmp($a['start'], $b['start']);
+});
+
+?>
+<dl>
+    <dt>Smoker?</dt>
+    <dd><?php echo $p['is_smoker'] ? 'Yes' : 'No'; ?></dd>
+
+    <dt>Phone</dt>
+    <dd><?php echo $this->escape($p['phone_number']); ?></dd>
+
+    <dt>Mobile phone</dt>
+    <dd><?php echo $this->escape($p['mobile_phone_number']); ?></dd>
+
+    <dt>Current program</dt>
+    <dd><?php echo $this->escape($p['current_program']); ?></dd>
+
+    <dt>Admit program</dt>
+    <dd><?php echo $this->escape($p['admit_program']); ?></dd>
+
+    <dt>Admit major</dt>
+    <dd><?php echo $this->escape($p['admit_major']); ?></dd>
+</dl>
+
+<table id="person-into-reservation" ui-jq="dataTable">
+  <caption>INTO housing reservation information (imported directly from INTO)</caption>
+  <thead>
+    <tr>
+      <th>Start</th>
+      <th>End</th>
+      <th>Housing information</th>
+      <th>Notes</th>
+      <th>Airport pickup?</th>
+      <th>Created at</th>
+    </tr>
+  </thead>
+  <tbody>
+<?php foreach ($rs as $r): ?>
+    <tr>
+      <td><?php echo $this->formatDate(new \DateTime($r['start'])); ?></td>
+      <td><?php echo $this->formatDate(new \DateTime($r['end'])); ?></td>
+      <td><span 
+            title="<?php echo $this->escape($r['description']); ?>"
+            ui-jq="tooltip"><?php echo $this->escape($r['housing_code']); ?></span></td>
+      <td><?php echo $this->escape($r['notes']); ?></td>
+      <td><?php echo $r['wants_airport_pickup'] ? 'Yes' : 'No'; ?></td>
+      <td>
+        <span
+          title="Updated at <?php echo $this->escape($this->formatDateTime(new \DateTime($r['updated_at'] . 'Z'))); ?>"
+          ui-jq="tooltip">
+          <?php echo $this->escape($this->formatDateTime(new \DateTime($r['created_at'] . 'Z'))); ?>
+        </span>
+      </td>
+    </tr>
+<?php endforeach; ?>
+  </tbody>
+</table>

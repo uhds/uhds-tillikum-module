@@ -1,0 +1,176 @@
+#!/usr/bin/env php
+<?php
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'started');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$commonDb = \Uhds_Db::factory('common');
+$intoDb = \Uhds_Db::factory('into');
+
+syslog(LOG_INFO, 'starting');
+
+$bannerRows = $commonDb->fetchAll(
+    $commonDb->select()
+        ->from('banner_import')
+);
+
+foreach ($bannerRows as $bannerRow) {
+    $bannerRow = array_map('trim', $bannerRow);
+    $person = $entityManager->getRepository('TillikumX\Entity\Person\Person')
+        ->findOneByPidm($bannerRow['pidm']);
+
+    if ($person === null) {
+        syslog(LOG_INFO, "could not find PIDM {$bannerRow['pidm']}; skipping");
+
+        continue;
+    }
+
+    $person->osuid = $bannerRow['osuid'];
+    $person->pidm = $bannerRow['pidm'];
+    $person->onid = $bannerRow['onid'];
+    $person->given_name = $bannerRow['firstname'];
+    $person->middle_name = $bannerRow['middlename'];
+    $person->family_name = $bannerRow['lastname'];
+    $person->gender = $bannerRow['gender'];
+    $person->birthdate = new \DateTime($bannerRow['birthdate']);
+    $person->ethnicity_code = $bannerRow['ethnicity_code'];
+    $person->residency_code = $bannerRow['residency_code'];
+    $person->origin_country = $bannerRow['into_country_of_origin'];
+    $person->student_type_code = $bannerRow['stype_code'];
+    $person->class_standing = $bannerRow['class_standing'];
+    $person->level_code = $bannerRow['level_code'];
+    $person->admit_term = $bannerRow['admit_term'];
+    $person->primary_degree = $bannerRow['primary_degree'];
+    $person->primary_major_1 = $bannerRow['primary_major_1'];
+    $person->primary_major_2 = $bannerRow['primary_major_2'];
+    $person->primary_minor_1 = $bannerRow['primary_minor_1'];
+    $person->hours_registered = $bannerRow['hours_registered'];
+
+    $directoryType = $entityManager->find(
+        'Tillikum\Entity\Person\Address\Type',
+        'directory'
+    );
+
+    $updatedAddress = false;
+    foreach ($person->addresses as $address) {
+        if ($address->type->id === 'directory') {
+            $address->street = trim(implode("\n", array($bannerRow['address1'], $bannerRow['address2'])));
+            $address->locality = $bannerRow['city'];
+            $address->region = $bannerRow['state'];
+            $address->postal_code = $bannerRow['zip'];
+            $address->country = $bannerRow['nation'];
+            $address->updated_by = '_system';
+
+            $updatedAddress = true;
+        }
+    }
+
+    if (!$updatedAddress) {
+        $address = new \Tillikum\Entity\Person\Address\Street();
+        $address->person = $person;
+        $address->is_primary = false;
+        $address->type = $directoryType;
+        $address->street = trim(implode("\n", array($bannerRow['address1'], $bannerRow['address2'])));
+        $address->locality = $bannerRow['city'];
+        $address->region = $bannerRow['state'];
+        $address->postal_code = $bannerRow['zip'];
+        $address->country = $bannerRow['nation'];
+        $address->created_by = '_system';
+        $address->updated_by = '_system';
+
+        $entityManager->persist($address);
+    }
+
+    $updatedEmail = false;
+    foreach ($person->emails as $email) {
+        if ($email->type->id === 'directory') {
+            $email->value = $bannerRow['email'];
+            $email->updated_by = '_system';
+
+            $updatedEmail = true;
+        }
+    }
+
+    if (!$updatedEmail) {
+        $email = new \Tillikum\Entity\Person\Address\Email();
+        $email->person = $person;
+        $email->is_primary = false;
+        $email->type = $directoryType;
+        $email->value = $bannerRow['email'];
+        $email->created_by = '_system';
+        $email->updated_by = '_system';
+
+        $entityManager->persist($email);
+    }
+
+    $updatedPhone = false;
+    foreach ($person->phone_numbers as $phoneNumber) {
+        if ($phoneNumber->type->id === 'directory') {
+            $phoneNumber->value = $bannerRow['phone'];
+            $phoneNumber->updated_by = '_system';
+
+            $updatedPhone = true;
+        }
+    }
+
+    if (!$updatedPhone) {
+        $phoneNumber = new \Tillikum\Entity\Person\Address\PhoneNumber();
+        $phoneNumber->person = $person;
+        $phoneNumber->is_primary = false;
+        $phoneNumber->type = $directoryType;
+        $phoneNumber->value = $bannerRow['phone'];
+        $phoneNumber->created_by = '_system';
+        $phoneNumber->updated_by = '_system';
+
+        $entityManager->persist($phoneNumber);
+    }
+
+    $isDead = (bool) $bannerRow['dead_flag'];
+    $isEligible = (bool) $bannerRow['eligibility_flag'];
+    $isConfidential = (bool) $bannerRow['confidentiality_flag'];
+    $isDualAdmit = (bool) $bannerRow['dual_admit_flag'];
+    $isEop = (bool) $bannerRow['eop_flag'];
+    $isHonorsCollege = (bool) $bannerRow['honors_college_flag'];
+
+    $tagMap = array(
+        'dead' => $isDead,
+        //'eligible' => ,
+        'confidential' => $isConfidential,
+        'dual' => $isDualAdmit,
+        'eop' => $isEop,
+        'hc' => $isHonorsCollege,
+    );
+
+    foreach ($tagMap as $tagId => $tagValue) {
+        $tagEntity = $entityManager->find(
+            'Tillikum\Entity\Person\Tag',
+            $tagId
+        );
+
+        if ($tagValue) {
+            if (!$person->tags->contains($tagEntity)) {
+                $person->tags->add($tagEntity);
+            }
+        } else {
+            $person->tags->removeElement($tagEntity);
+        }
+    }
+
+    $entityManager->flush();
+    $entityManager->clear();
+}
+
+syslog(LOG_INFO, 'finished');

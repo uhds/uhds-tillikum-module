@@ -1,0 +1,57 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+$getopt = new Console\Getopt(
+    array(
+        'o=s' => "output PIDMs to this file (default: `-' for STDOUT)",
+    )
+);
+
+try {
+    $outputFile = strlen($getopt->o) > 0 ? $getopt->o : '-';
+} catch (Console\Exception\RuntimeException $e) {
+    echo $e->getUsageMessage();
+
+    exit(1);
+}
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$outputResource = $outputFile === '-' ? STDOUT : fopen($outputFile, 'wb');
+if (!$outputResource) {
+    exit(1);
+}
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$rows = $entityManager->createQuery(
+    "
+    SELECT p.pidm
+    FROM TillikumX\Entity\Person\Person p
+    WHERE LENGTH(p.pidm) > 0
+    "
+)
+    ->getResult();
+
+$pidmsWritten = 0;
+foreach ($rows as $row) {
+    fwrite($outputResource, "{$row['pidm']}\n");
+    $pidmsWritten += 1;
+}
+
+syslog(LOG_INFO, "wrote {$pidmsWritten} PIDMs to {$outputFile}");
+closelog();

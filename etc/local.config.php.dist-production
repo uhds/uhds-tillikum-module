@@ -1,0 +1,218 @@
+<?php
+
+use Tillikum\Navigation;
+
+return array(
+    'bootstrap' => array(
+        'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Bootstrap.php',
+        'class' => 'TillikumX\Bootstrap',
+    ),
+    'resources' => array(
+        'doctrine' => array(
+            'cache' => array(
+                'instances' => array(
+                    'default' => array(
+                        'adapterClass' => 'Doctrine\Common\Cache\MemcachedCache',
+                        'namespace' => 'Tillikum_',
+                        'options' => array(
+                            'servers' => array(
+                                array(
+                                    'host' => '<REPLACE>',
+                                ),
+                            )
+                        ),
+                    ),
+                ),
+            ),
+            'dbal' => array(
+                'connections' => array(
+                    'default' => array(
+                        'parameters' => array(
+                            'host' => '<REPLACE>',
+                            'dbname' => '<REPLACE>',
+                            'user' => '<REPLACE>',
+                            'password' => '<REPLACE>'
+                        ),
+                    ),
+                ),
+            ),
+            'orm' => array(
+                'entityManagers' => array(
+                    'default' => array(
+                        'metadataDrivers' => array(
+                            'drivers' => array(
+                                array(
+                                    'mappingNamespace' => 'TillikumX\Entity',
+                                    'mappingDirs' => array(
+                                        APPLICATION_PATH . '/contrib/osu/library/TillikumX/Entity',
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        'di' => array(
+            'definition' => array(
+                'class' => array(
+                    'Zend\Db\Adapter\Adapter' => array(
+                        'methods' => array(
+                            '__construct' => array(
+                                'driver' => array(
+                                    'type' => 'Zend\Db\Adapter\Driver\DriverInterface',
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            'instance' => array(
+                'aliases' => array(
+                    'PersonForm' => 'TillikumX\Form\Person\Person',
+                    'PersonEntity' => 'TillikumX\Entity\Person\Person',
+                    'RoleProvider' => 'TillikumX\Authorization\RoleProvider\RoleManager',
+                ),
+                'preferences' => array(
+                    'Zend\Authentication\Adapter\AdapterInterface' => 'Tillikum\Authentication\Adapter\Cas',
+                ),
+                'BillingStrategies' => array(
+                    'parameters' => array(
+                        'array' => array(
+                            'TillikumX\Billing\Event\Strategy\Scholar',
+                        ),
+                    ),
+                ),
+                'Jobs' => array(
+                    'parameters' => array(
+                        'array' => array(
+                            'TillikumX\Job\BannerBillingExport',
+                        ),
+                    ),
+                ),
+                'LoggedInMainNavigation' => array(
+                    'parameters' => array(
+                        'pages' => array(
+                            'servicelog' => array(
+                                'uri' => '/servicelog',
+                                'title' => 'Customer service log',
+                                'label' => 'Customer service',
+                                'order' => 610,
+                            ),
+                            'apply' => array(
+                                'uri' => '/apply/admin',
+                                'title' => 'Housing application administrative interface',
+                                'label' => 'Housing application',
+                                'order' => 620,
+                            ),
+                            'tool' => array(
+                                'uri' => '/myuhds/tool',
+                                'title' => 'UHDS internal tools',
+                                'label' => 'Tools',
+                                'order' => 630,
+                            ),
+                        ),
+                    ),
+                ),
+                'PersonTabNavigation' => array(
+                    'parameters' => array(
+                        'pages' => array(
+                            'id' => array(
+                                'content_id' => 'person-id-card',
+                                'content_helper' => 'tabViewPersonIdCard',
+                                'label' => 'ID',
+                                'uri' => '#person-id-card',
+                                'order' => 300,
+                            ),
+                            'into' => array(
+                                'content_id' => 'person-into',
+                                'content_helper' => 'tabViewPersonInto',
+                                'label' => 'INTO',
+                                'uri' => '#person-into',
+                                'order' => 400,
+                            ),
+                        ),
+                        'options' => array(
+                            'active' => 1,
+                        ),
+                    ),
+                ),
+                'PendingBookings' => array(
+                    'parameters' => array(
+                        'array' => array(
+                            'TillikumX\Booking\Into',
+                            'TillikumX\Booking\PendingWinter2013',
+                        ),
+                    ),
+                ),
+                'Reports' => array(
+                    'parameters' => array(
+                        'array' => array(
+                            'TillikumX\Report\ApplicantCounts',
+                            'TillikumX\Report\AssignmentLetter',
+                            'TillikumX\Report\BookingEndAudit',
+                            'TillikumX\Report\CancellationAudit',
+                            'TillikumX\Report\Checkin',
+                            'TillikumX\Report\Checkout',
+                            'TillikumX\Report\FacilityList',
+                            'TillikumX\Report\Holds',
+                            'TillikumX\Report\IntoNew',
+                            'TillikumX\Report\IntoNewCount',
+                            'TillikumX\Report\IntoPreferences',
+                            'TillikumX\Report\IntoReservationAudit',
+                            'TillikumX\Report\LivingLearning',
+                            'TillikumX\Report\MailboxNotAssigned',
+                            'TillikumX\Report\MixedGender',
+                            'TillikumX\Report\NewAssignments',
+                            'TillikumX\Report\OccupancyCounts',
+                            'TillikumX\Report\OpenSpace',
+                            'TillikumX\Report\Roster',
+                            'TillikumX\Report\RoomChanges',
+                            'TillikumX\Report\Unassigned',
+                        ),
+                    ),
+                ),
+                'Tillikum\Authentication\Adapter\Cas' => array(
+                    'parameters' => array(
+                        'serverUri' => 'https://login.oregonstate.edu/cas',
+                    ),
+                ),
+                'Zend\Http\Client' => array(
+                    'parameters' => array(
+                        'options' => array(
+                            'adapter' => 'Zend\Http\Client\Adapter\Curl',
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        'form' => array(
+            'prefixPath' => array(
+                array(
+                    'prefix' => 'TillikumX\Form\\',
+                    'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Form',
+                ),
+                array(
+                    'prefix' => 'TillikumX_Form',
+                    'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Form',
+                ),
+            ),
+        ),
+        'frontController' => array(
+            'actionHelperPaths' => array(
+                'TillikumX\Controller\Action\Helper\\' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Controller/Action/Helper',
+            ),
+            'plugins' => array(
+                100 => 'Tillikum\Controller\Plugin\CasAuthentication',
+            ),
+        ),
+        'view' => array(
+            'helperPath' => array(
+                'TillikumX\View\Helper\\' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/View/Helper',
+            ),
+            'scriptPath' => array(
+                APPLICATION_PATH . '/contrib/osu/www/application/%s/views/scripts'
+            ),
+        ),
+    ),
+);

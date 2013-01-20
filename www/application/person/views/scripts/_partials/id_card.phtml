@@ -1,0 +1,10 @@
+<dl>
+    <dt>Prox number</dt>
+    <dd><?php echo $this->escape($this->prox_number); ?></dd>
+    <dd><small>last updated <?php echo $this->escape($this->formatDateTime($this->prox_number_updated_at)); ?></small></dd>
+<?php foreach ($this->balances as $plan => $balance): ?>
+    <dt><?php echo $this->escape($plan); ?></dt>
+    <dd><?php echo $this->escape($this->formatCurrency($balance)); ?></dd>
+    <dd><small>last updated <?php echo $this->escape($this->formatDateTime($this->balances_updated_at)); ?></small></dd>
+<?php endforeach; ?>
+</dl>

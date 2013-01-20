@@ -1,0 +1,102 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+$getopt = new Console\Getopt(
+    array(
+        'd=s' => "directory in which to place generated rosters",
+    )
+);
+
+try {
+    $outputDirectory = strlen($getopt->d) > 0 ? $getopt->d : '';
+} catch (Console\Exception\RuntimeException $e) {
+    echo $e->getUsageMessage();
+
+    exit(1);
+}
+
+if (!is_dir($outputDirectory) || !is_writable($outputDirectory)) {
+    die("$outputDirectory must be a writable directory.\n");
+}
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+if (date('n') == 9) {
+    $date = new DateTime('fourth Sunday of this month');
+} else {
+    $date = new DateTime(date('Y-m-d'));
+}
+
+$activeFacilityGroups = $entityManager->createQuery(
+    "
+    SELECT fg.id, fgc.name
+    FROM Tillikum\Entity\FacilityGroup\FacilityGroup fg
+    JOIN fg.configs fgc
+    WHERE :date BETWEEN fgc.start AND fgc.end
+    "
+)
+    ->setParameter('date', $date)
+    ->getResult();
+
+$facilityGroupIds = array();
+foreach ($activeFacilityGroups as $facilityGroup) {
+    $facilityGroupIds[] = $facilityGroup['id'];
+}
+
+$report = new \TillikumX\Report\Roster($entityManager);
+$report->setParameters(
+    array(
+        'date' => $date->format('Y-m-d'),
+        'facility_groups' => $facilityGroupIds,
+    )
+);
+
+$output = $report->generate();
+
+$outputResource = fopen("{$outputDirectory}/Roster (all halls).csv", 'wb');
+if (!$outputResource) {
+    exit(1);
+}
+
+foreach ($output as $line) {
+    fputcsv($outputResource, $line);
+}
+
+foreach ($activeFacilityGroups as $row) {
+    $report->setParameters(
+        array(
+            'date' => $date->format('Y-m-d'),
+            'facility_groups' => array($row['id']),
+        )
+    );
+
+    $output = $report->generate();
+
+    $outputResource = fopen("{$outputDirectory}/Roster for {$row['name']}.csv", 'wb');
+    if (!$outputResource) {
+        exit(1);
+    }
+
+    foreach ($output as $line) {
+        fputcsv($outputResource, $line);
+    }
+}
+
+syslog(LOG_INFO, "finished writing rosters to {$outputDirectory}");
+closelog();

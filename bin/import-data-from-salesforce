@@ -1,0 +1,421 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$getopt = new Console\Getopt(
+    array(
+        'i=s' => "path to the XML document to import (default: `-' for STDIN)",
+    )
+);
+
+try {
+    $inputFile = strlen($getopt->i) > 0 ? $getopt->i : '-';
+} catch (Console\Exception\RuntimeException $e) {
+    echo $e->getUsageMessage();
+
+    exit(1);
+}
+
+$inputFileContents = file_get_contents($inputFile === '-' ? 'php://stdin' : $inputFile);
+
+$saneFileSizeThreshold = 10000;
+if (mb_strlen($inputFileContents, '8bit') < $saneFileSizeThreshold) {
+    syslog(LOG_ERR, "{$inputFile} size less than {$saneFileSizeThreshold}; quitting");
+
+    exit(1);
+}
+
+// Load the XML database
+$students = simplexml_load_string($inputFileContents);
+
+if ($students === false) {
+    syslog(LOG_ERR, "unable to parse XML file contents; quitting");
+
+    exit(1);
+}
+
+$db = \Uhds_Db::factory('common');
+
+// Create temporary table based on current structure
+$db->query('DROP TABLE IF EXISTS `into_salesforce_person_new`');
+$db->query('DROP TABLE IF EXISTS `into_salesforce_person_reservation_new`');
+$db->query('CREATE TABLE `into_salesforce_person_new` LIKE `into_salesforce_person`');
+$db->query('CREATE TABLE `into_salesforce_person_reservation_new` LIKE `into_salesforce_person_reservation`');
+
+$majorMap = $db->fetchPairs(
+    $db->select()
+        ->from('banner_major_map', array('code', 'major'))
+);
+
+foreach ($students as $student) {
+    $db->beginTransaction();
+
+    $db->insert(
+        'into_salesforce_person_new',
+        array(
+            'osuid' => $student['id'],
+            'application_id' => $student['applicationId'],
+            'pidm' => $student->pidm,
+            'given_name' => $student->firstName,
+            'family_name' => $student->lastName,
+            'gender' => $student->gender,
+            'country_of_origin' => $student->countryOfOrigin,
+            'phone_number' => $student->phone,
+            'mobile_phone_number' => $student->mobilePhone,
+            'current_program' => $student->currentProgram,
+            'admit_program' => $student->admitProgram,
+            'admit_major' => @$majorMap[(string) $student->admitMajor] ?: '',
+            'is_smoker' => (string) $student->smoker === 'Y' ? true : false,
+            'guardian_given_name' => $student->guardianFirstName,
+            'guardian_family_name' => $student->guardianLastName,
+            'guardian_relationship' => $student->guardianRelation,
+            'guardian_street_address' => implode("\n", array(
+                $student->guardianStreet1,
+                $student->guardianStreet2,
+                $student->guardianStreet3
+            )),
+            'guardian_locality' => $student->guardianCity,
+            'guardian_region' => $student->guardianStateProvince,
+            'guardian_postal_code' => $student->guardianPostalCode,
+            'guardian_country' => $student->guardianCountry,
+            'guardian_phone_number' => $student->guardianPhone,
+            'guardian_email' => $student->guardianEmail
+        )
+    );
+
+    foreach ($student->reservations->reservation as $reservation) {
+        try {
+            $db->insert(
+                'into_salesforce_person_reservation_new',
+                array(
+                    'id' => $reservation['id'],
+                    'person_osuid' => $student['id'],
+                    'start' => $reservation->startDate,
+                    'end' => $reservation->endDate,
+                    'description' => $reservation->description,
+                    'housing_code' => $reservation->housingCode,
+                    'notes' => $reservation->notes,
+                    'wants_airport_pickup' => (string) $reservation->airportPickup === 'Y' ? true : false,
+                    'url' => $reservation->url,
+                    'created_at' => gmdate('Y-m-d H:i:s', strtotime($reservation->created)),
+                    'updated_at' => gmdate('Y-m-d H:i:s', strtotime($reservation->modified))
+                )
+            );
+        } catch (\Zend_Db_Exception $e) {
+            continue;
+        }
+    }
+
+    $db->commit();
+}
+
+$NAME_MAXLEN = 30;
+$ADD_REMOVE_FORMAT = "%-" . $NAME_MAXLEN . "s%-11s%-12s%-12s\n";
+$CHANGE_FORMAT = "%-" . $NAME_MAXLEN . "s%-11s%s\n";
+
+$formatName = function ($familyName, $givenName) use ($NAME_MAXLEN) {
+    return mb_substr(
+        sprintf(
+            '%s, %s',
+            mb_strtoupper($familyName),
+            $givenName
+        ),
+        0,
+        $NAME_MAXLEN
+    );
+};
+
+// REMOVALS
+// Everything in orig table that is no longer in new table
+
+$rows = $db->fetchAll(
+    $db->select()
+        ->from(
+            'into_salesforce_person_reservation',
+            array(
+                'person_osuid',
+                'start',
+                'end',
+                'housing_code'
+            )
+        )
+        ->join(
+            'into_salesforce_person',
+            'into_salesforce_person_reservation.person_osuid = into_salesforce_person.osuid',
+            array(
+                'given_name',
+                'family_name'
+            )
+        )
+        ->joinLeft(
+            'into_salesforce_person_reservation_new',
+            'into_salesforce_person_reservation.id = into_salesforce_person_reservation_new.id',
+            array()
+        )
+        ->where('into_salesforce_person_reservation_new.id IS NULL')
+);
+
+$rShouldSendEmail = $hShouldSendEmail = false;
+$rBody = $hBody = '';
+$rBody .= sprintf($ADD_REMOVE_FORMAT, 'Name', 'OSU ID', 'Start', 'End');
+$rBody .= sprintf($ADD_REMOVE_FORMAT, '----', '------', '-----', '---');
+$hBody = $rBody;
+foreach ($rows as $row) {
+    if ($row['housing_code'] === 'IHST') {
+        $hShouldSendEmail = true;
+        $hBody .= sprintf(
+            $ADD_REMOVE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['person_osuid'], $row['start'], $row['end']
+        );
+    } else {
+        $rShouldSendEmail = true;
+        $rBody .= sprintf(
+            $ADD_REMOVE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['person_osuid'], $row['start'], $row['end']
+        );
+    }
+}
+
+if ($rShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('canceled INTO non-homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_CancelResidenceReservation')
+        ->setBodyText($rBody)
+        ->send();
+}
+
+if ($hShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('canceled INTO homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_CancelHomestayReservation')
+        ->setBodyText($hBody)
+        ->send();
+}
+
+// CHANGES
+// Everything in new table that has a different modification time than the old table
+
+$rows = $db->fetchAll(
+    $db->select()
+        ->from(
+            'into_salesforce_person_reservation',
+            array(
+                'start',
+                'end',
+                'description',
+                'housing_code',
+                'notes',
+                'wants_airport_pickup'
+            )
+        )
+        ->join(
+            'into_salesforce_person_reservation_new',
+            'into_salesforce_person_reservation.id = into_salesforce_person_reservation_new.id',
+            array(
+                'new_start' => 'start',
+                'new_end' => 'end',
+                'new_housing_code' => 'housing_code',
+                'new_description' => 'description',
+                'new_housing_code' => 'housing_code',
+                'new_notes' => 'notes',
+                'new_wants_airport_pickup' => 'wants_airport_pickup'
+            )
+        )
+        ->join(
+            'into_salesforce_person_new',
+            'into_salesforce_person_reservation_new.person_osuid = into_salesforce_person_new.osuid',
+            array(
+                'osuid',
+                'given_name',
+                'family_name'
+            )
+        )
+        ->where('into_salesforce_person_reservation.updated_at != into_salesforce_person_reservation_new.updated_at')
+);
+
+$rShouldSendEmail = $hShouldSendEmail = false;
+$rBody = $hBody = '';
+$rBody .= sprintf($CHANGE_FORMAT, 'Name', 'OSU ID', 'Changes');
+$rBody .= sprintf($CHANGE_FORMAT, '----', '------', '-------');
+$hBody = $rBody;
+foreach ($rows as $row) {
+    $changes = array();
+    foreach (array('start', 'end', 'description', 'housing_code', 'notes', 'wants_airport_pickup') as $col) {
+        if ($row[$col] !== $row["new_$col"]) {
+            $changes[] = "$col: {$row[$col]} → {$row["new_$col"]}";
+        }
+    }
+
+    // If any homestay, send homestay email
+    if (in_array('IHST', array($row['housing_code'], $row['new_housing_code']))) {
+        $hShouldSendEmail = true;
+        $hBody .= sprintf($CHANGE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['osuid'], implode(', ', $changes)
+        );
+    }
+
+    // Send non-homestay email unless both old and new are homestay
+    if ('IHST' !== $row['housing_code'] && 'IHST' !== $row['new_housing_code']) {
+        $rShouldSendEmail = true;
+        $rBody .= sprintf($CHANGE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['osuid'], implode(', ', $changes)
+        );
+    }
+}
+
+if ($rShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('changed INTO non-homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_ChangeResidenceReservation')
+        ->setBodyText($rBody)
+        ->send();
+}
+
+if ($hShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('changed INTO homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_ChangeHomestayReservation')
+        ->setBodyText($hBody)
+        ->send();
+}
+
+// ADDS
+// Everything in the new table that is no longer in the orig table
+
+$rows = $db->fetchAll(
+    $db->select()
+        ->from(
+            'into_salesforce_person_reservation',
+            array()
+        )
+        ->joinRight(
+            'into_salesforce_person_reservation_new',
+            'into_salesforce_person_reservation.id = into_salesforce_person_reservation_new.id',
+            array(
+                'person_osuid',
+                'start',
+                'end',
+                'housing_code'
+            )
+        )
+        ->join(
+            'into_salesforce_person_new',
+            'into_salesforce_person_reservation_new.person_osuid = into_salesforce_person_new.osuid',
+            array(
+                'given_name',
+                'family_name',
+                'gender',
+                'pidm'
+            )
+        )
+        ->where('into_salesforce_person_reservation.id IS NULL')
+);
+
+$peopleCreated = 0;
+$applicationsCreated = 0;
+
+$rShouldSendEmail = $hShouldSendEmail = false;
+$rBody = $hBody = '';
+$rBody .= sprintf($ADD_REMOVE_FORMAT, 'Name', 'OSU ID', 'Start', 'End');
+$rBody .= sprintf($ADD_REMOVE_FORMAT, '----', '------', '-----', '---');
+$hBody = $rBody;
+foreach ($rows as $row) {
+    if ($row['housing_code'] === 'IHST') {
+        $hShouldSendEmail = true;
+        $hBody .= sprintf(
+            $ADD_REMOVE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['person_osuid'], $row['start'], $row['end']
+        );
+    } else {
+        $rShouldSendEmail = true;
+        $rBody .= sprintf(
+            $ADD_REMOVE_FORMAT, $formatName($row['family_name'], $row['given_name']),
+            $row['person_osuid'], $row['start'], $row['end']
+        );
+    }
+
+    $person = $entityManager->getRepository('TillikumX\Entity\Person\Person')
+        ->findOneByPidm($row['pidm']);
+
+    if ($person === null) {
+        $person = new \TillikumX\Entity\Person\Person();
+        $person->osuid = $row['person_osuid'];
+        $person->pidm = $row['pidm'];
+        $person->family_name = $row['family_name'];
+        $person->given_name = $row['given_name'];
+        $person->gender = $row['gender'];
+        $person->created_by = '_system';
+        $person->updated_by = '_system';
+
+        $entityManager->persist($person);
+        $entityManager->flush();
+
+        $peopleCreated += 1;
+    }
+
+    $appGw = new \Uhds\Model\HousingApplication\ApplicationGateway();
+    $application = $appGw->fetch($person->id, 'into');
+
+    if ($application === null) {
+        $application = new \Uhds\Model\HousingApplication\Application();
+        $application->id = $application->getGateway()->generateId($person->id, 'into');
+        $application->state = 'completed';
+        $application->completed_at = new \DateTime();
+        $application->personalprofile = new \Uhds\Model\HousingApplication\Application\Section();
+        $application->personalprofile->is_complete = true;
+        $application->personalprofile->given_name = $row['given_name'];
+        $application->personalprofile->family_name = $row['family_name'];
+        $application->personalprofile->gender = $row['gender'];
+
+        $application->save();
+
+        $applicationsCreated += 1;
+    }
+}
+
+if ($rShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('new INTO non-homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_ResidenceReserve')
+        ->setBodyText($rBody)
+        ->send();
+}
+
+if ($hShouldSendEmail) {
+    id(new \Uhds_Mail())
+        ->setSubject('new INTO homestay reservation summary')
+        ->addRecipientsFromDatabase('Reservation_Mail_HomestayReserve')
+        ->setBodyText($hBody)
+        ->send();
+}
+
+$db->query(
+    'RENAME TABLE `into_salesforce_person` TO `into_salesforce_person_tmp`,'
+  . '`into_salesforce_person_new` TO `into_salesforce_person`,'
+  . '`into_salesforce_person_reservation` TO `into_salesforce_person_reservation_tmp`,'
+  . '`into_salesforce_person_reservation_new` TO `into_salesforce_person_reservation`'
+);
+
+$db->query('DROP TABLE IF EXISTS `into_salesforce_person_tmp`');
+$db->query('DROP TABLE IF EXISTS `into_salesforce_person_reservation_tmp`');
+
+syslog(LOG_INFO, "created {$peopleCreated} people");
+syslog(LOG_INFO, "created {$applicationsCreated} applications");
+closelog();
