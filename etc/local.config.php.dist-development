@@ -4,7 +4,7 @@ use Tillikum\Navigation;
 
 return array(
     'bootstrap' => array(
-        'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Bootstrap.php',
+        'path' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Bootstrap.php',
         'class' => 'TillikumX\Bootstrap',
     ),
     'resources' => array(
@@ -27,7 +27,7 @@ return array(
                                 array(
                                     'mappingNamespace' => 'TillikumX\Entity',
                                     'mappingDirs' => array(
-                                        APPLICATION_PATH . '/contrib/osu/library/TillikumX/Entity',
+                                        APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Entity',
                                     ),
                                 ),
                             ),
@@ -173,17 +173,17 @@ return array(
             'prefixPath' => array(
                 array(
                     'prefix' => 'TillikumX\Form\\',
-                    'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Form',
+                    'path' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Form',
                 ),
                 array(
                     'prefix' => 'TillikumX_Form',
-                    'path' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Form',
+                    'path' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Form',
                 ),
             ),
         ),
         'frontController' => array(
             'actionHelperPaths' => array(
-                'TillikumX\Controller\Action\Helper\\' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/Controller/Action/Helper',
+                'TillikumX\Controller\Action\Helper\\' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Controller/Action/Helper',
             ),
             'plugins' => array(
                 100 => 'Tillikum\Controller\Plugin\CasAuthentication',
@@ -191,10 +191,10 @@ return array(
         ),
         'view' => array(
             'helperPath' => array(
-                'TillikumX\View\Helper\\' => APPLICATION_PATH . '/contrib/osu/library/TillikumX/View/Helper',
+                'TillikumX\View\Helper\\' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/View/Helper',
             ),
             'scriptPath' => array(
-                APPLICATION_PATH . '/contrib/osu/www/application/%s/views/scripts'
+                APPLICATION_PATH . '/site/oregonstate.edu/www/application/%s/views/scripts'
             ),
         ),
     ),
