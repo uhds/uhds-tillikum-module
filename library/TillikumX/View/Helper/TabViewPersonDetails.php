@@ -1,10 +1,10 @@
 <?php
-
 /**
- * OSU Tillikum extension library
+ * The Tillikum Project (http://tillikum.org/)
  *
- * @package TillikumX_View
- * @subpackage Helper
+ * @link       http://tillikum.org/websvn/
+ * @copyright  Copyright 2009-2012 Oregon State University (http://oregonstate.edu/)
+ * @license    http://www.gnu.org/licenses/gpl-2.0-standalone.html GPLv2
  */
 
 namespace TillikumX\View\Helper;
@@ -13,19 +13,9 @@ use Zend_View_Helper_Abstract as AbstractHelper;
 
 /**
  * Helper for rendering the person tab view 'details' section
- *
- * @package TillikumX_View
- * @subpackage Helper
  */
 class TabViewPersonDetails extends AbstractHelper
 {
-    protected $script;
-
-    public function __construct()
-    {
-        $this->script = '_partials/details.phtml';
-    }
-
     public function tabViewPersonDetails()
     {
         return $this;
@@ -39,10 +29,10 @@ class TabViewPersonDetails extends AbstractHelper
     public function render($person)
     {
         return $this->view->partial(
-            $this->script,
+            '_partials/details.phtml',
             array(
                 'person' => $person,
-                'tbc' => new \Uhds_View_Helper_TranslateBannerCode()
+                'tbc' => new \Uhds_View_Helper_TranslateBannerCode(),
             )
         );
     }
