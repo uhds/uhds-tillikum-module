@@ -69,14 +69,18 @@ class CancellationAudit extends AbstractReport
 
         $people = $this->em->createQuery(
             "
-            SELECT p,
-                   MAX(b.end) b_end,
-                   MAX(m.end) m_end
+            SELECT p, mp.name mp_name, fc.name fname, fgc.name fgname, b.end b_end, m.end m_end
             FROM TillikumX\Entity\Person\Person p
             LEFT JOIN p.bookings b
             LEFT JOIN p.mealplans m
+            LEFT JOIN m.mealplan mp
+            LEFT JOIN b.facility f
+            LEFT JOIN f.configs fc WITH fc.start BETWEEN b.start AND b.end
+            LEFT JOIN f.facility_group fg
+            LEFT JOIN fg.configs fgc WITH fgc.start BETWEEN b.start AND b.end
             WHERE p.id IN (:personIds)
             GROUP BY p.id
+            HAVING b.end IS NULL OR b.end = MAX(b.end) OR m.end IS NULL OR m.end = MAX(m.end)
             "
         )
             ->setParameter('personIds', array_keys($personIdToApplicationMap))
@@ -91,7 +95,9 @@ class CancellationAudit extends AbstractReport
                 'Cancellation date',
                 'Cancellation code',
                 'Latest booking end',
+                'Latest booking assignment',
                 'Latest meal plan end',
+                'Latest meal plan name',
             )
         );
 
@@ -111,8 +117,10 @@ class CancellationAudit extends AbstractReport
                 $templateId,
                 date('Y-m-d g:i:s a', date_create($app['cancelled_at'], $utc)->format('U')),
                 $app['cancelled_code'],
-                $row['b_end'],
-                $row['m_end'],
+                $row['b_end'] ? $row['b_end']->format('Y-m-d') : '',
+                $row['b_end'] ? sprintf('%s %s', $row['fgname'], $row['fname']) : '',
+                $row['m_end'] ? $row['m_end']->format('Y-m-d') : '',
+                $row['m_end'] ? $row['mp_name'] : '',
             );
         }
 
