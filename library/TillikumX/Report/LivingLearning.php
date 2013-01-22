@@ -69,7 +69,7 @@ class LivingLearning extends AbstractReport
 
         $rows = $this->em->createQuery(
             "
-            SELECT p,
+            SELECT p.id, p.family_name, p.given_name, p.osuid, p.onid,
                    b.start booking_start, b.end booking_end,
                    mb.start plan_start, mb.end plan_end,
                    m.name mname,
@@ -96,23 +96,24 @@ class LivingLearning extends AbstractReport
             LEFT JOIN p.addresses directory_address WITH directory_address.type = 'directory'
             LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1'
             LEFT JOIN p.tags t
-            WHERE t.id NOT IN ('ra', 'sra') AND p.id IN (:personIds)
+            WHERE t.id IS NULL OR t.id NOT IN ('ra', 'sra')
             GROUP BY p.id
             ORDER BY fgname, rname
             "
         )
             ->setParameter('contractIds', $contractIds)
             ->setParameter('date', $date)
-            ->setParameter('personIds', array_keys($personIds))
             ->getResult();
 
         $ret = array(
             array(
                 'OSU ID',
-                'Name',
+                'Last name',
+                'First name',
                 'Application type',
                 'Arriving at',
-                'Assignment',
+                'Facility group',
+                'Room',
                 'Room type',
                 'Booking start',
                 'Booking end',
@@ -154,8 +155,6 @@ class LivingLearning extends AbstractReport
             ->setParameter('date', $date);
 
         foreach ($rows as $row) {
-            $person = $row[0];
-
             if (!$row['is_signed']) {
                 $contractSigned = false;
             } elseif ($row['is_cancelled']) {
@@ -168,12 +167,20 @@ class LivingLearning extends AbstractReport
 
             $unixAYearAgo = strtotime('-1 year');
 
+            if (isset($personIds[$row['id']])) {
+                $templateIds = $personIds[$row['id']];
+            } else {
+                $templateIds = array();
+            }
+
             $retRow = array(
-                $person->osuid,
-                $person->display_name,
-                implode(', ', $personIds[$person->id]),
+                $row['osuid'],
+                $row['family_name'],
+                $row['given_name'],
+                implode(', ', $templateIds),
                 'Not implemented yet.',
-                sprintf('%s %s', $row['fgname'], $row['rname']),
+                $row['fgname'],
+                $row['rname'],
                 $row['roomtype'],
                 $row['booking_start']->format('Y-m-d'),
                 $row['booking_end']->format('Y-m-d'),
@@ -181,9 +188,9 @@ class LivingLearning extends AbstractReport
                 $row['plan_start'] ? $row['plan_start']->format('Y-m-d') : '',
                 $row['plan_end'] ? $row['plan_end']->format('Y-m-d') : '',
                 'Not implemented yet.',
-                $row['updated_at']->format('U') > $unixAYearAgo ? 'Yes' : 'No',
+                $row['updated_at'] ? ($row['updated_at']->format('U') > $unixAYearAgo ? 'Yes' : 'No') : 'No',
                 $contractSigned ? 'Yes' : 'No',
-                sprintf('%s@onid.oregonstate.edu', $person->onid),
+                sprintf('%s@onid.oregonstate.edu', $row['onid']),
                 str_replace("\n", ' / ', $row['directory_address_street']),
                 $row['directory_address_locality'],
                 $row['directory_address_region'],
@@ -192,7 +199,7 @@ class LivingLearning extends AbstractReport
             );
 
             $roommates = $roommateQuery
-                ->setParameter('personId', $person->id)
+                ->setParameter('personId', $row['id'])
                 ->setParameter('facilityId', $row['facility_id'])
                 ->getResult();
 
