@@ -69,7 +69,7 @@ class CancellationAudit extends AbstractReport
 
         $people = $this->em->createQuery(
             "
-            SELECT p.id, p.osuid, p.family_name, p.given_name,
+            SELECT p,
                    MAX(b.end) b_end,
                    MAX(m.end) m_end
             FROM TillikumX\Entity\Person\Person p
@@ -85,24 +85,30 @@ class CancellationAudit extends AbstractReport
         $ret = array(
             array(
                 'OSU ID',
-                'Last name',
-                'First name',
+                'Display name',
+                'Gender',
+                'Cancelled application',
                 'Cancellation date',
                 'Cancellation code',
-                'Booking end',
-                'Meal plan end'
+                'Latest booking end',
+                'Latest meal plan end',
             )
         );
 
         $utc = new DateTimeZone('UTC');
 
         foreach ($people as $row) {
-            $app = $personIdToApplicationMap[$row['id']];
+            $person = $row[0];
+
+            $app = $personIdToApplicationMap[$person->id];
+
+            list($personId, $templateId) = explode('-', $app['id'], 2);
 
             $ret[] = array(
-                $row['osuid'],
-                $row['family_name'],
-                $row['given_name'],
+                $person->osuid,
+                $person->display_name,
+                $person->gender,
+                $templateId,
                 date('Y-m-d g:i:s a', date_create($app['cancelled_at'], $utc)->format('U')),
                 $app['cancelled_code'],
                 $row['b_end'],
