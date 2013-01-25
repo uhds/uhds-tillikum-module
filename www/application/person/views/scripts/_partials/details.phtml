@@ -9,93 +9,100 @@
   </ul>
 </nav>
 
-<dl>
-  <dt>Display name</dt>
-  <dd>
-    <?php echo $this->escape($this->person->display_name); ?>
-  </dd>
+<div class="yui3-g">
+  <div class="yui3-u-1-2">
+    <dl>
+      <dt>Display name</dt>
+      <dd>
+        <?php echo $this->escape($this->person->display_name); ?>
+      </dd>
 
-  <dt>Given (first) name</dt>
-  <dd><?php echo $this->escape($this->person->given_name); ?></dd>
+      <dt>Given (first) name</dt>
+      <dd><?php echo $this->escape($this->person->given_name); ?></dd>
 
-  <dt>Middle name</dt>
-  <dd><?php echo $this->escape($this->person->middle_name); ?></dd>
+      <dt>Middle name</dt>
+      <dd><?php echo $this->escape($this->person->middle_name); ?></dd>
 
-  <dt>Family (last) name</dt>
-  <dd><?php echo $this->escape($this->person->family_name); ?></dd>
+      <dt>Family (last) name</dt>
+      <dd><?php echo $this->escape($this->person->family_name); ?></dd>
 
-  <dt>OSU ID</dt>
-  <dd><?php echo $this->escape($this->person->osuid); ?></dd>
-  <dt>PIDM</dt>
-  <dd><?php echo $this->escape($this->person->pidm); ?></dd>
-  <dt>ONID username</dt>
-  <dd><?php echo $this->escape($this->person->onid); ?></dd>
-  <dt>Gender</dt>
-  <dd><?php echo $this->escape($this->person->gender); ?></dd>
-  <dt>Medical Notes</dt>
-  <dd><?php echo nl2br($this->escape($this->person->medical)) ?></dd>
+      <dt>OSU ID</dt>
+      <dd><?php echo $this->escape($this->person->osuid); ?></dd>
+      <dt>PIDM</dt>
+      <dd><?php echo $this->escape($this->person->pidm); ?></dd>
+      <dt>ONID username</dt>
+      <dd><?php echo $this->escape($this->person->onid); ?></dd>
+      <dt>Gender</dt>
+      <dd><?php echo $this->escape($this->person->gender); ?></dd>
 
-<?php if (!empty($this->person->birthdate)): ?>
-  <dt>Date of birth</dt>
-  <dd>
-    <?php echo $this->escape($this->formatDate($this->person->birthdate)); ?>
-    (age <strong<?php echo (($age = $this->person->age) < 18) ? ' class="alert"' : ''; ?>><?php echo $age; ?></strong>)
-  </dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->birthdate)): ?>
+      <dt>Date of birth</dt>
+      <dd>
+        <?php echo $this->escape($this->formatDate($this->person->birthdate)); ?>
+        (age <strong<?php echo (($age = $this->person->age) < 18) ? ' class="alert"' : ''; ?>><?php echo $age; ?></strong>)
+      </dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->ethnicity_code)): ?>
-  <dt>Ethnicity code</dt>
-  <dd><?php echo $this->escape($this->tbc->ethnicity($this->person->ethnicity_code)); ?></dd>
-<?php endif; ?>
+      <dt>Medical Notes</dt>
+      <dd><?php echo nl2br($this->escape($this->person->medical)) ?></dd>
+    </dl>
+  </div>
+  <div class="yui3-u-1-2">
+    <dl>
+    <?php if (!empty($this->person->ethnicity_code)): ?>
+      <dt>Ethnicity code</dt>
+      <dd><?php echo $this->escape($this->tbc->ethnicity($this->person->ethnicity_code)); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->origin_country)): ?>
-  <dt>Country of origin</dt>
-  <dd><?php echo $this->escape($this->person->origin_country); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->origin_country)): ?>
+      <dt>Country of origin</dt>
+      <dd><?php echo $this->escape($this->person->origin_country); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->residency_code)): ?>
-  <dt>Residency code</dt>
-  <dd><?php echo $this->escape($this->tbc->residency($this->person->residency_code)); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->residency_code)): ?>
+      <dt>Residency code</dt>
+      <dd><?php echo $this->escape($this->tbc->residency($this->person->residency_code)); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->student_type_code)): ?>
-  <dt>Student type code</dt>
-  <dd><?php echo $this->escape($this->tbc->studentType($this->person->student_type_code)); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->student_type_code)): ?>
+      <dt>Student type code</dt>
+      <dd><?php echo $this->escape($this->tbc->studentType($this->person->student_type_code)); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->admit_term)): ?>
-  <dt>Admit term</dt>
-  <dd><?php echo $this->escape($this->person->admit_term); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->admit_term)): ?>
+      <dt>Admit term</dt>
+      <dd><?php echo $this->escape($this->person->admit_term); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->class_standing)): ?>
-  <dt>Class standing</dt>
-  <dd><?php echo $this->escape($this->tbc->classStanding($this->person->class_standing)); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->class_standing)): ?>
+      <dt>Class standing</dt>
+      <dd><?php echo $this->escape($this->tbc->classStanding($this->person->class_standing)); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->level_code)): ?>
-  <dt>Graduate level code</dt>
-  <dd><?php echo $this->escape($this->person->level_code); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->level_code)): ?>
+      <dt>Graduate level code</dt>
+      <dd><?php echo $this->escape($this->person->level_code); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->primary_degree)): ?>
-  <dt>Degree sought</dt>
-  <dd><?php echo $this->escape($this->tbc->degree($this->person->primary_degree)); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->primary_degree)): ?>
+      <dt>Degree sought</dt>
+      <dd><?php echo $this->escape($this->tbc->degree($this->person->primary_degree)); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->primary_major_1)): ?>
-  <dt>Primary major</dt>
-  <dd><?php echo $this->escape($this->person->primary_major_1); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->primary_major_1)): ?>
+      <dt>Primary major</dt>
+      <dd><?php echo $this->escape($this->person->primary_major_1); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->primary_minor_1)): ?>
-  <dt>Primary minor</dt>
-  <dd><?php echo $this->escape($this->person->primary_minor_1); ?></dd>
-<?php endif; ?>
+    <?php if (!empty($this->person->primary_minor_1)): ?>
+      <dt>Primary minor</dt>
+      <dd><?php echo $this->escape($this->person->primary_minor_1); ?></dd>
+    <?php endif; ?>
 
-<?php if (!empty($this->person->hours_registered)): ?>
-  <dt>Hours registered</dt>
-  <dd><?php echo $this->person->hours_registered; ?></dd>
-<?php endif; ?>
-
-</dl>
+    <?php if (!empty($this->person->hours_registered)): ?>
+      <dt>Hours registered</dt>
+      <dd><?php echo $this->person->hours_registered; ?></dd>
+    <?php endif; ?>
+    </dl>
+  </div>
+</div>
