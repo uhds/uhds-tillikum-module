@@ -49,11 +49,6 @@ class Person extends TillikumPerson
     protected $medical;
 
     /**
-     * @ORM\Column(nullable=true, type="date")
-     */
-    protected $birthdate;
-
-    /**
      * @ORM\Column(nullable=true)
      */
     protected $ethnicity_code;
