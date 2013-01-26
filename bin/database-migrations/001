@@ -1,0 +1,40 @@
+#!/usr/bin/env php
+<?php
+/*
+ * Migrates the birthdate column from tillikumx_person to tillikum_person.
+ */
+
+require dirname(dirname(dirname(dirname(__DIR__)))) . '/library/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('EntityManager');
+
+$conn = $entityManager->getConnection();
+
+$conn->executeUpdate('LOCK TABLES tillikum_person WRITE, tillikumx_person WRITE');
+
+$conn->executeUpdate('ALTER TABLE tillikum_person ADD COLUMN birthdate date AFTER display_name');
+
+$stmt = $conn->prepare(
+    "
+    UPDATE tillikum_person, tillikumx_person
+    SET tillikum_person.birthdate = tillikumx_person.birthdate
+    WHERE tillikum_person.id = tillikumx_person.id
+    "
+);
+$stmt->execute();
+
+$conn->executeUpdate('ALTER TABLE tillikumx_person DROP COLUMN birthdate');
+
+$conn->executeUpdate('UNLOCK TABLES');
