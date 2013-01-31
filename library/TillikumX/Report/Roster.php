@@ -121,9 +121,11 @@ class Roster extends AbstractReport
             $sth = $conn->prepare(
                 "
                 SELECT application.id FROM tillikum_housing_application_application application
-                WHERE application.completed_at IS NOT NULL
-                AND SUBSTRING(application.id FROM 1 FOR LOCATE('-', application.id) - 1)
-                IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
+                JOIN tillikum_housing_application_template template ON SUBSTRING(application.id FROM LOCATE('-', application.id) + 1) = template.id
+                WHERE application.completed_at IS NOT NULL AND
+                      application.cancelled_at IS NULL AND
+                      template.effective <= '{$date->format('Y-m-d')}' AND
+                      SUBSTRING(application.id FROM 1 FOR LOCATE('-', application.id) - 1) IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
                 "
             );
             $sth->execute($ids);
@@ -138,6 +140,7 @@ class Roster extends AbstractReport
             array(
                 'Assignment',
                 'OSU ID',
+                'PIDM',
                 'Last name',
                 'First name',
                 'Gender',
@@ -181,6 +184,7 @@ class Roster extends AbstractReport
             $row = array(
                 sprintf('%s %s', $row['fgcname'], $row['rcname']),
                 $person->osuid,
+                $person->pidm,
                 $person->family_name,
                 $person->given_name,
                 $person->gender,
