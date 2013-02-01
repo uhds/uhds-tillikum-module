@@ -120,8 +120,15 @@ class Roster extends AbstractReport
         if (!empty($ids)) {
             $sth = $conn->prepare(
                 "
-                SELECT application.id FROM tillikum_housing_application_application application
+                SELECT application.id
+                FROM tillikum_housing_application_application application
                 JOIN tillikum_housing_application_template template ON SUBSTRING(application.id FROM LOCATE('-', application.id) + 1) = template.id
+                JOIN (
+                    SELECT a.id, MAX(t.effective) AS template_effective
+                    FROM tillikum_housing_application_application a
+                    JOIN tillikum_housing_application_template t ON SUBSTRING(a.id FROM LOCATE('-', a.id) + 1) = t.id
+                    GROUP BY SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1)
+                ) AS tm ON application.id = tm.id AND template.effective = tm.template_effective
                 WHERE application.completed_at IS NOT NULL AND
                       application.cancelled_at IS NULL AND
                       template.effective <= '{$date->format('Y-m-d')}' AND
@@ -138,7 +145,8 @@ class Roster extends AbstractReport
 
         $ret = array(
             array(
-                'Assignment',
+                'Facility group name',
+                'Room name',
                 'OSU ID',
                 'PIDM',
                 'Last name',
@@ -182,7 +190,8 @@ class Roster extends AbstractReport
             $tags = implode(', ', $tags);
 
             $row = array(
-                sprintf('%s %s', $row['fgcname'], $row['rcname']),
+                $row['fgcname'],
+                $row['rcname'],
                 $person->osuid,
                 $person->pidm,
                 $person->family_name,
