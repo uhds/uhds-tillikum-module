@@ -48,15 +48,19 @@ class FacilityList extends AbstractReport
             "
             SELECT f.id, fc.name fname, fc.capacity, fc.gender,
                    CASE WHEN COUNT(tag_ra.id) > 0 THEN 'Y' ELSE 'N' END is_ra,
-                   fgc.name fgname
+                   fgc.name fgname,
+                   s.name sname
             FROM Tillikum\Entity\Facility\Facility f
             JOIN f.configs fc
+            LEFT JOIN Tillikum\Entity\Facility\Room\Room r WITH f = r
+            LEFT JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH r = rc.facility AND :date BETWEEN rc.start AND rc.end
+            LEFT JOIN rc.suite s
             LEFT JOIN fc.tags tag_ra WITH tag_ra.id = 'ra'
             JOIN f.facility_group fg
             JOIN fg.configs fgc
             WHERE fg.id IN (:facilityGroupIds) AND 
-                  fc.start <= :date AND fc.end >= :date AND
-                  fgc.start <= :date AND fgc.end >= :date
+                  :date BETWEEN rc.start AND fc.end AND
+                  :date BETWEEN fgc.start AND fgc.end
             GROUP BY f.id
             ORDER BY fgname, fname
             "
@@ -72,6 +76,7 @@ class FacilityList extends AbstractReport
                 'Facility capacity',
                 'Facility gender',
                 'RA Facility?',
+                'Suite',
             )
         );
 
@@ -82,6 +87,7 @@ class FacilityList extends AbstractReport
                 $row['capacity'],
                 $row['gender'],
                 $row['is_ra'],
+                $row['sname'],
             );
         }
 
