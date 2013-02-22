@@ -14,6 +14,15 @@ use Tillikum\Form\Person\Person as PersonForm;
 
 class Person extends PersonForm
 {
+    protected $onidGateway;
+
+    public function __construct($options = null)
+    {
+        parent::__construct($options);
+
+        $this->onidGateway = new \Uhds\Model\Ldap\OnidGateway();
+    }
+
     public function bind($person)
     {
         parent::bind($person);
@@ -49,7 +58,9 @@ class Person extends PersonForm
         $pidm = new \Zend_Form_Element_Text(
             'pidm',
             array(
-                'description' => 'Use caution when changing this value.',
+                'description' => 'If you enter a value here, it will be' .
+                                 ' checked against the ONID database and you' .
+                                 ' will not need to add any other fields.',
                 'filters' => array(
                     'StringTrim',
                 ),
@@ -62,7 +73,9 @@ class Person extends PersonForm
         $osuid = new \Uhds_Form_Element_Osuid(
             'osuid',
             array(
-                'description' => 'Use caution when changing this value.',
+                'description' => 'If you enter a value here, it will be' .
+                                 ' checked against the ONID database and you' .
+                                 ' will not need to add any other fields.',
                 'order' => 2,
                 'required' => false
             )
@@ -71,7 +84,9 @@ class Person extends PersonForm
         $onid = new \Uhds_Form_Element_Onid(
             'onid',
             array(
-                'description' => 'Use caution when changing this value.',
+                'description' => 'If you enter a value here, it will be' .
+                                 ' checked against the ONID database and you' .
+                                 ' will not need to add any other fields.',
                 'order' => 3,
                 'required' => false
             )
@@ -93,5 +108,32 @@ class Person extends PersonForm
                 $birthdate
             )
         );
+    }
+
+    public function isValid($data)
+    {
+        if (!parent::isValid($data)) {
+            return false;
+        }
+
+        if ($data['pidm']) {
+            $onidEntry = $this->onidGateway->fetchByPidm($data['pidm']);
+        } elseif ($data['osuid']) {
+            $onidEntry = $this->onidGateway->fetchByOsuid($data['osuid']);
+        } elseif ($data['onid']) {
+            $onidEntry = $this->onidGateway->fetchByUsername($data['onid']);
+        }
+
+        if (!$onidEntry) {
+            return true;
+        }
+
+        $data['family_name'] = $onidEntry->lastname;
+        $data['given_name'] = $onidEntry->firstname;
+        $data['pidm'] = $onidEntry->pidm;
+        $data['osuid'] = $onidEntry->osuid;
+        $data['onid'] = $onidEntry->username;
+
+        return parent::isValid($data);
     }
 }
