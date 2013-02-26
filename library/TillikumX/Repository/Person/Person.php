@@ -26,6 +26,14 @@ class Person extends EntityRepository
             $qb->expr()->orX(
                 $qb->expr()->like(
                     $qb->expr()->concat(
+                        'p.nickname', $qb->expr()->concat(
+                            $qb->expr()->literal(' '), 'p.family_name'
+                        )
+                    ),
+                    ':prefixInput'
+                ),
+                $qb->expr()->like(
+                    $qb->expr()->concat(
                         'p.given_name', $qb->expr()->concat(
                             $qb->expr()->literal(' '), 'p.family_name'
                         )
@@ -35,11 +43,7 @@ class Person extends EntityRepository
                 $qb->expr()->like(
                     $qb->expr()->concat(
                         'p.family_name', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), $qb->expr()->concat(
-                                'p.given_name', $qb->expr()->concat(
-                                    $qb->expr()->literal(' '), 'p.middle_name'
-                                )
-                            )
+                            $qb->expr()->literal(' '), 'p.given_name'
                         )
                     ),
                     ':prefixInput'
