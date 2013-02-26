@@ -17,6 +17,7 @@ use Vo\DateRange;
 /**
  * @ORM\Entity(repositoryClass="TillikumX\Repository\Person\Person")
  * @ORM\Table(name="tillikumx_person", indexes={
+ *     @ORM\Index(name="idx_nickname", columns={"nickname"}),
  *     @ORM\Index(name="idx_osuid", columns={"osuid"}),
  *     @ORM\Index(name="idx_onid", columns={"onid"})
  * })
