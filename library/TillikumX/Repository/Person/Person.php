@@ -13,49 +13,52 @@ use Doctrine\ORM\EntityRepository;
 
 class Person extends EntityRepository
 {
-    public function createSearchQueryBuilder($input)
+    public function getAutocompleteQuery($input)
     {
         $input = trim($input);
         $input = preg_replace('/\s{2,}/', ' ', $input);
         $input = preg_replace('/,\s?/', ' ', $input);
 
         $qb = $this->getEntityManager()
-        ->createQueryBuilder();
+            ->createQueryBuilder();
 
-        $qb->where(
-            $qb->expr()->orX(
-                $qb->expr()->like(
-                    $qb->expr()->concat(
-                        'p.nickname', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), 'p.family_name'
-                        )
+        $qb->select('p')
+            ->from('Tillikum\Entity\Person\Person', 'p')
+            ->leftJoin('TillikumX\Entity\Person\Person', 'px', 'WITH', 'p = px')
+            ->where(
+                $qb->expr()->orX(
+                    $qb->expr()->like(
+                        $qb->expr()->concat(
+                            'COALESCE(px.nickname, \'\')', $qb->expr()->concat(
+                                $qb->expr()->literal(' '), 'COALESCE(p.family_name, \'\')'
+                            )
+                        ),
+                        ':prefixInput'
                     ),
-                    ':prefixInput'
-                ),
-                $qb->expr()->like(
-                    $qb->expr()->concat(
-                        'p.given_name', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), 'p.family_name'
-                        )
+                    $qb->expr()->like(
+                        $qb->expr()->concat(
+                            'COALESCE(p.given_name, \'\')', $qb->expr()->concat(
+                                $qb->expr()->literal(' '), 'COALESCE(p.family_name, \'\')'
+                            )
+                        ),
+                        ':prefixInput'
                     ),
-                    ':prefixInput'
-                ),
-                $qb->expr()->like(
-                    $qb->expr()->concat(
-                        'p.family_name', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), 'p.given_name'
-                        )
+                    $qb->expr()->like(
+                        $qb->expr()->concat(
+                            'COALESCE(p.family_name, \'\')', $qb->expr()->concat(
+                                $qb->expr()->literal(' '), 'COALESCE(p.given_name, \'\')'
+                            )
+                        ),
+                        ':prefixInput'
                     ),
-                    ':prefixInput'
-                ),
-                'p.pidm = :exactInput',
-                'p.onid = :exactInput',
-                'p.osuid = :exactInput'
+                    'px.pidm = :exactInput',
+                    'px.onid = :exactInput',
+                    'px.osuid = :exactInput'
+                )
             )
-        )
-        ->setParameter('exactInput', $input)
-        ->setParameter('prefixInput', $input . '%');
+            ->setParameter('exactInput', $input)
+            ->setParameter('prefixInput', $input . '%');
 
-        return $qb;
+        return $qb->getQuery();
     }
 }
