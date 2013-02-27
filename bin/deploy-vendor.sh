@@ -14,3 +14,4 @@ rsync -crlvz ${source}/ ${DEST_HOST}:${dest_path} \
   --delay-updates \
   --delete-delay \
   --rsync-path="sudo rsync" \
+  --exclude '.svn/'
