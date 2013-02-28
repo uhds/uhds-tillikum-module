@@ -38,19 +38,30 @@ $serviceManager = $application->getBootstrap()
 
 $entityManager = $serviceManager->get('EntityManager');
 
-$rows = $entityManager->createQuery(
-    "
+$commonDb = \Uhds_Db::factory('common');
+
+$tillikumRows = $entityManager->createQuery(
+    '
     SELECT p.osuid
     FROM TillikumX\Entity\Person\Person p
     JOIN p.bookings b
     WHERE b.end >= :now AND LENGTH(p.osuid) > 0
-    "
+    '
 )
     ->setParameter('now', new DateTime(date('Y-m-d')))
     ->getResult();
 
+$staffRows = $commonDb->fetchAll(
+    $commonDb->select()->from('staff', array('osuid' => 'ID'))
+);
+
 $osuidsWritten = 0;
-foreach ($rows as $row) {
+foreach ($tillikumRows as $row) {
+    fwrite($outputResource, "{$row['osuid']}\n");
+    $osuidsWritten += 1;
+}
+
+foreach ($staffRows as $row) {
     fwrite($outputResource, "{$row['osuid']}\n");
     $osuidsWritten += 1;
 }
