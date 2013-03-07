@@ -28,13 +28,18 @@ class CsGold extends Entity
     protected $id;
 
     /**
+     * @ORM\ManyToOne(targetEntity="Tillikum\Entity\Mealplan\Mealplan")
+     * @ORM\JoinColumn(name="mealplan_id", referencedColumnName="id")
+     */
+    protected $mealplan;
+
+    /**
      * @ORM\Column
      */
     protected $gold_id;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Tillikum\Entity\Mealplan\Mealplan")
-     * @ORM\JoinColumn(name="mealplan_id", referencedColumnName="id")
+     * @ORM\Column
      */
-    protected $mealplan;
+    protected $description;
 }
