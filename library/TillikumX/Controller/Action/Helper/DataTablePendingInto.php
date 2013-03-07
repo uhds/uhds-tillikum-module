@@ -212,6 +212,7 @@ class DataTablePendingInto extends AbstractHelper
             'billing' => array(
                 'rates' => array(
                     array(
+                        'delete_me' => false,
                         'rule_id' => $rule ? $rule->id : '',
                         'start' => $start->format('Y-m-d'),
                         'end' => $end->format('Y-m-d'),
@@ -269,6 +270,7 @@ class DataTablePendingInto extends AbstractHelper
             'billing' => array(
                 'rates' => array(
                     array(
+                        'delete_me' => false,
                         'rule_id' => $rule ? $rule->id : '',
                         'start' => $start->format('Y-m-d'),
                         'end' => $end->format('Y-m-d'),
