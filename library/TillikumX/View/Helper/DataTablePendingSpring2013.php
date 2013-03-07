@@ -9,15 +9,15 @@
 
 namespace TillikumX\View\Helper;
 
-class DataTablePendingWinter2013 extends DataTablePendingHousingApplication
+class DataTablePendingSpring2013 extends DataTablePendingHousingApplication
 {
-    public function dataTablePendingWinter2013($rows)
+    public function dataTablePendingSpring2013($rows)
     {
         return parent::dataTablePendingHousingApplication($rows);
     }
 
     public function getCaption()
     {
-        return 'Pending winter 2013 housing applications';
+        return 'Pending spring 2013 housing applications';
     }
 }
