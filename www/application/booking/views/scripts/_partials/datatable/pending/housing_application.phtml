@@ -41,7 +41,10 @@
 <script type="text/javascript">
 $(function() {
   $('#pending-housing-application').dataTable({
-    sDom: '<"H"if>t<"F"ip>'
+    aoColumnDefs: [
+      { aTargets: [8], sType: 'time-html' },
+    ],
+    sDom: '<"H"fl>t<"F"ip>'
   });
 });
 </script>
