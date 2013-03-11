@@ -130,7 +130,7 @@ class DataTablePendingInto extends AbstractHelper
                 ),
                 'name' => $person ? $person->display_name : '',
                 'osuid' => $person ? $person->osuid : '',
-                'age' => $person ? date_diff($person->birthdate, new DateTime(date('Y-m-d')))->y : '',
+                'age' => $person ? date_diff($person->birthdate ?: new DateTime(date('Y-m-d')), new DateTime(date('Y-m-d')))->y : '',
                 'gender' => $person ? $person->gender : '',
                 'booking_start' => isset($bookingRange) ? $bookingRange->getStart() : null,
                 'booking_end' => isset($bookingRange) ? $bookingRange->getEnd() : null,
