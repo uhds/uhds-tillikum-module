@@ -4,7 +4,7 @@
       <a href="<?php echo $this->escape(sprintf('/servicelog/search?autocomplete_id=%s&person=%s&_submit=Search', $this->person->id, $this->person->display_name)) ?>">Customer service log</a>
     </li>
     <li>
-      <a href="<?php echo $this->escape(sprintf('/apply/admin?osuid=%s&submit=Search', $this->person->id)) ?>">Housing application</a>
+      <a href="<?php echo $this->escape(sprintf('/apply/admin?osuid=%s&submit=Search', $this->person->osuid)) ?>">Housing application</a>
     </li>
   </ul>
 </nav>
