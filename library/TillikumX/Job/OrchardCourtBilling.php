@@ -24,7 +24,7 @@ class OrchardCourtBilling extends AbstractJob
 
     public function getDescription()
     {
-        return 'Advance billing for all bookings in Orchard Court.';
+        return 'Assess billing for all Orchard Court facility bookings.';
     }
 
     public function getFormClass()
@@ -34,7 +34,7 @@ class OrchardCourtBilling extends AbstractJob
 
     public function getName()
     {
-        return 'Orchard Court monthly billing';
+        return 'Orchard Court facility booking billing assessment';
     }
 
     public function run()
@@ -68,10 +68,11 @@ class OrchardCourtBilling extends AbstractJob
             JOIN f.facility_group fg
             JOIN b.billing bi
             JOIN bi.rates r
-            WHERE bi.through < r.end AND
+            WHERE (bi.through < r.end OR bi.through IS NULL) AND
                   fg.id = :facilityId
             "
         )
+            // Orchard Court
             ->setParameter('facilityId', 'd7e9b0536c8fec14ea94e94cb0e63eb9')
             ->getResult();
 
