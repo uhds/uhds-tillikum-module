@@ -200,6 +200,10 @@ class MealplanBookingBilling extends AbstractJob
                     continue;
                 }
 
+                if ($processedAmount == 0) {
+                    continue;
+                }
+
                 $csGoldResult = $this->em
                     ->getRepository('TillikumX\Entity\Mealplan\CsGold')
                     ->findOneBy(array('mealplan' => $booking->mealplan));
