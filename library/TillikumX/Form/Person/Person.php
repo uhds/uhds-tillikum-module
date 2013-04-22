@@ -30,6 +30,8 @@ class Person extends PersonForm
         $this->pidm->setValue($person->pidm);
         $this->osuid->setValue($person->osuid);
         $this->onid->setValue($person->onid);
+        $this->usg_id->setValue($person->usg_id);
+        $this->passport_id->setValue($person->passport_id);
         $this->birthdate->setValue($person->birthdate ? $person->birthdate->format('Y-m-d') : '');
 
         return $this;
@@ -46,6 +48,8 @@ class Person extends PersonForm
         $this->person->pidm = $this->pidm->getValue();
         $this->person->osuid = $this->osuid->getValue();
         $this->person->onid = $this->onid->getValue();
+        $this->person->usg_id = $this->usg_id->getValue();
+        $this->person->passport_id = $this->passport_id->getValue();
         $this->person->birthdate = $this->birthdate->getValue() ? new DateTime($this->birthdate->getValue()) : null;
 
         return $this;
@@ -92,6 +96,24 @@ class Person extends PersonForm
             )
         );
 
+        $usgId = new \Zend_Form_Element_Text(
+            'usg_id',
+            array(
+                'label' => 'US Government-issued ID',
+                'order' => 4,
+                'required' => false,
+            )
+        );
+
+        $passportId = new \Zend_Form_Element_Text(
+            'passport_id',
+            array(
+                'label' => 'Passport ID',
+                'order' => 5,
+                'required' => false,
+            )
+        );
+
         $birthdate = new \Tillikum_Form_Element_Date(
             'birthdate',
             array(
@@ -105,6 +127,8 @@ class Person extends PersonForm
                 $pidm,
                 $osuid,
                 $onid,
+                $usgId,
+                $passportId,
                 $birthdate
             )
         );
@@ -122,17 +146,17 @@ class Person extends PersonForm
             $onidEntry = $this->onidGateway->fetchByOsuid($data['osuid']);
         } elseif ($data['onid']) {
             $onidEntry = $this->onidGateway->fetchByUsername($data['onid']);
+        } else {
+            $data['pidm'] = 'ignore-this-value-' . uniqid();
         }
 
-        if (!$onidEntry) {
-            return true;
+        if ($onidEntry) {
+            $data['family_name'] = $onidEntry->lastname;
+            $data['given_name'] = $onidEntry->firstname;
+            $data['pidm'] = $onidEntry->pidm;
+            $data['osuid'] = $onidEntry->osuid;
+            $data['onid'] = $onidEntry->username;
         }
-
-        $data['family_name'] = $onidEntry->lastname;
-        $data['given_name'] = $onidEntry->firstname;
-        $data['pidm'] = $onidEntry->pidm;
-        $data['osuid'] = $onidEntry->osuid;
-        $data['onid'] = $onidEntry->username;
 
         return parent::isValid($data);
     }
