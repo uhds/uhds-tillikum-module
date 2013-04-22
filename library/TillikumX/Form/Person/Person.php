@@ -70,7 +70,7 @@ class Person extends PersonForm
                 ),
                 'label' => 'PIDM',
                 'order' => 1,
-                'required' => false
+                'required' => false,
             )
         );
 
@@ -81,7 +81,7 @@ class Person extends PersonForm
                                  ' checked against the ONID database and you' .
                                  ' will not need to add any other fields.',
                 'order' => 2,
-                'required' => false
+                'required' => false,
             )
         );
 
@@ -92,7 +92,7 @@ class Person extends PersonForm
                                  ' checked against the ONID database and you' .
                                  ' will not need to add any other fields.',
                 'order' => 3,
-                'required' => false
+                'required' => false,
             )
         );
 
@@ -124,7 +124,7 @@ class Person extends PersonForm
             'birthdate',
             array(
                 'label' => 'Birth date',
-                'order' => 9
+                'order' => 9,
             )
         );
 
@@ -135,7 +135,7 @@ class Person extends PersonForm
                 $onid,
                 $usgId,
                 $passportId,
-                $birthdate
+                $birthdate,
             )
         );
     }
