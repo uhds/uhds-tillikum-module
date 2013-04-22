@@ -99,6 +99,9 @@ class Person extends PersonForm
         $usgId = new \Zend_Form_Element_Text(
             'usg_id',
             array(
+                'filters' => array(
+                    'StringTrim',
+                ),
                 'label' => 'US Government-issued ID',
                 'order' => 4,
                 'required' => false,
@@ -108,6 +111,9 @@ class Person extends PersonForm
         $passportId = new \Zend_Form_Element_Text(
             'passport_id',
             array(
+                'filters' => array(
+                    'StringTrim',
+                ),
                 'label' => 'Passport ID',
                 'order' => 5,
                 'required' => false,
