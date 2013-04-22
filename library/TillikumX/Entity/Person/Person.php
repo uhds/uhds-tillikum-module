@@ -19,7 +19,9 @@ use Vo\DateRange;
  * @ORM\Table(name="tillikumx_person", indexes={
  *     @ORM\Index(name="idx_nickname", columns={"nickname"}),
  *     @ORM\Index(name="idx_osuid", columns={"osuid"}),
- *     @ORM\Index(name="idx_onid", columns={"onid"})
+ *     @ORM\Index(name="idx_onid", columns={"onid"}),
+ *     @ORM\Index(name="idx_usg_id", columns={"usg_id"}),
+ *     @ORM\Index(name="idx_passport_id", columns={"passport_id"})
  * })
  */
 class Person extends TillikumPerson
@@ -38,6 +40,16 @@ class Person extends TillikumPerson
      * @ORM\Column(nullable=true)
      */
     protected $onid;
+
+    /**
+     * @ORM\Column(nullable=true)
+     */
+    protected $usg_id;
+
+    /**
+     * @ORM\Column(nullable=true)
+     */
+    protected $passport_id;
 
     /**
      * @ORM\Column(nullable=true)
