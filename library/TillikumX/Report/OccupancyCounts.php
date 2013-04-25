@@ -79,6 +79,26 @@ class OccupancyCounts extends AbstractReport
             ->setParameter('date', $date)
             ->getResult();
 
+        $scholars = $this->em->createQuery(
+            "
+            SELECT COUNT(b) total, CONCAT('Scholars (', CONCAT(t.name, ')')) category, fgc.name building
+            FROM Tillikum\Entity\Booking\Facility\Facility b
+            JOIN b.person p
+            JOIN p.tags ptag_scholar WITH ptag_scholar.id = 'scholar'
+            JOIN Tillikum\Entity\Facility\Room\Room r WITH b.facility = r
+            JOIN r.facility_group fg
+            JOIN fg.configs fgc
+            JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH r = rc.facility
+            JOIN rc.type t
+            WHERE :date BETWEEN b.start AND b.end AND
+                  :date BETWEEN rc.start AND rc.end AND
+                  :date BETWEEN fgc.start AND fgc.end
+            GROUP BY fg, t
+            "
+        )
+            ->setParameter('date', $date)
+            ->getResult();
+
         $ret = array(
             array(
                 'Building',
@@ -96,6 +116,14 @@ class OccupancyCounts extends AbstractReport
         }
 
         foreach ($staff as $member) {
+            $ret[] = array(
+                $member['building'],
+                $member['category'],
+                $member['total'],
+            );
+        }
+
+        foreach ($scholars as $member) {
             $ret[] = array(
                 $member['building'],
                 $member['category'],
