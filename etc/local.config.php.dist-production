@@ -87,8 +87,12 @@ return array(
                     'parameters' => array(
                         'array' => array(
                             'TillikumX\Job\BannerBillingExport',
+                            'TillikumX\Job\FacilityBookingBilling',
                             'TillikumX\Job\IntoBillingExport',
+                            'TillikumX\Job\MealplanBookingBilling',
                             'TillikumX\Job\OrchardCourtBilling',
+                            'TillikumX\Job\PropagateFacilityBookings',
+                            'TillikumX\Job\PropagateMealplanBookings',
                         ),
                     ),
                 ),
@@ -140,7 +144,7 @@ return array(
                     'parameters' => array(
                         'array' => array(
                             'TillikumX\Booking\Into',
-                            'TillikumX\Booking\PendingWinter2013',
+                            'TillikumX\Booking\PendingSpring2013',
                         ),
                     ),
                 ),
