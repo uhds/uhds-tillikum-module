@@ -49,8 +49,10 @@ $rows = $entityManager->createQuery(
 
 $pidmsWritten = 0;
 foreach ($rows as $row) {
-    fwrite($outputResource, "{$row['pidm']}\n");
-    $pidmsWritten += 1;
+    if (ctype_digit($row['pidm'])) {
+        fwrite($outputResource, "{$row['pidm']}\n");
+        $pidmsWritten += 1;
+    }
 }
 
 syslog(LOG_INFO, "wrote {$pidmsWritten} PIDMs to {$outputFile}");
