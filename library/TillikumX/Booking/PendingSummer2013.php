@@ -11,14 +11,14 @@ namespace TillikumX\Booking;
 
 use Tillikum\Booking\AbstractPendingBooking;
 
-class PendingWinter2013 extends AbstractPendingBooking
+class PendingSummer2013 extends AbstractPendingBooking
 {
     /**
      * @return string
      */
     public function getActionHelperName()
     {
-        return 'DataTablePendingWinter2013';
+        return 'DataTablePendingSummer2013';
     }
 
     /**
@@ -26,7 +26,7 @@ class PendingWinter2013 extends AbstractPendingBooking
      */
     public function getDescription()
     {
-        return 'All bookings pending for the winter 2013 housing application.';
+        return 'All bookings pending for the summer 2013 housing application.';
     }
 
     /**
@@ -34,7 +34,7 @@ class PendingWinter2013 extends AbstractPendingBooking
      */
     public function getName()
     {
-        return 'Winter 2013';
+        return 'Summer 2013';
     }
 
     /**
@@ -42,6 +42,6 @@ class PendingWinter2013 extends AbstractPendingBooking
      */
     public function getViewHelperName()
     {
-        return 'DataTablePendingWinter2013';
+        return 'DataTablePendingSummer2013';
     }
 }

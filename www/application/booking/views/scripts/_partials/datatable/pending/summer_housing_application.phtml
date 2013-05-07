@@ -1,0 +1,50 @@
+<table id="pending-housing-application">
+  <caption><?php echo $this->escape($this->caption) ?></caption>
+  <thead>
+    <tr>
+      <th>OSU ID</th>
+      <th>Name</th>
+      <th>Age</th>
+      <th>Gender</th>
+      <th>Building preferences</th>
+      <th>Profile answers</th>
+      <th>Spring assignment</th>
+      <th>Fall assignment</th>
+      <th>Attendance start</th>
+      <th>Attendance end</th>
+      <th>Application completed at</th>
+      <th>Facility booking</th>
+      <th>Meal plan booking</th>
+    </tr>
+  </thead>
+  <tbody>
+<?php foreach ($this->rows as $row): ?>
+    <tr>
+      <td><a href="<?php echo $row['person_uri'] ?>"><?php echo $this->escape($row['osuid']) ?></a></td>
+      <td><?php echo $this->escape($row['name']) ?></td>
+      <td><?php echo $this->escape($row['age']) ?></td>
+      <td><?php echo $this->escape($row['gender']) ?></td>
+      <td><?php echo nl2br($this->escape($row['preferences'])) ?></td>
+      <td><?php echo $this->escape($row['profile']) ?></td>
+      <td><?php echo $this->escape($row['spring_assignment']) ?></td>
+      <td><?php echo $this->escape($row['fall_assignment']) ?></td>
+      <td><?php echo $this->markupDate($row['attendance_start']) ?></td>
+      <td><?php echo $this->markupDate($row['attendance_end']) ?></td>
+      <td><?php echo $this->markupDateTime($row['application_completed_at']) ?></td>
+      <td><a href="<?php echo $this->escape($row['facility_booking_uri']) ?>">Book</a></td>
+      <td><a href="<?php echo $this->escape($row['mealplan_booking_uri']) ?>">Book</a></td>
+    </tr>
+<?php endforeach ?>
+  </tbody>
+</table>
+
+<script type="text/javascript">
+$(function() {
+  $('#pending-housing-application').dataTable({
+    aoColumnDefs: [
+      { aTargets: [8, 9, 10], sType: 'time-html' },
+    ],
+    sDom: '<"H"fl>t<"F"ip>'
+  });
+});
+</script>

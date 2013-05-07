@@ -145,6 +145,7 @@ return array(
                         'array' => array(
                             'TillikumX\Booking\Into',
                             'TillikumX\Booking\PendingSpring2013',
+                            'TillikumX\Booking\PendingSummer2013',
                         ),
                     ),
                 ),
