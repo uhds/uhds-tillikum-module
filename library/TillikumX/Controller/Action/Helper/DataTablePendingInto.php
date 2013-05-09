@@ -8,14 +8,6 @@ use Zend_Controller_Action_Helper_Abstract as AbstractHelper;
 
 class DataTablePendingInto extends AbstractHelper
 {
-    protected static $bannerToRateCodes = array(
-        'IHS1' => 'NTOS',
-        'IHS2' => 'NTOD',
-        'IHS3' => 'NTODPR',
-        'IHS4' => 'NTOS',
-        'IHST' => 'NTOH',
-    );
-
     public function dataTablePendingInto()
     {
         $ac = $this->_actionController;
@@ -169,56 +161,9 @@ class DataTablePendingInto extends AbstractHelper
     {
         $ac = $this->_actionController;
 
-        $i = $person->getIntoData();
-
-        $housingCode = null;
-        if (null !== $i) {
-            foreach ($i['reservations'] as $reservation) {
-                if ($reservation['end'] >= $start->format('Y-m-d')) {
-                    $housingCode = $reservation['housing_code'];
-                }
-            }
-        }
-
-        $suffix = '';
-        if ($person->isIntoAcademicEnglish() ||
-            $person->isIntoPathways() ||
-            $person->isIntoPathwaysGraduate()) {
-            $suffix = 'AEPW';
-        } elseif ($person->isIntoGeneralEnglish()) {
-            $suffix = 'GE';
-        } elseif ($i['person']['current_program'] === 'SAWE') {
-            $suffix = 'AEPW';
-        }
-
-        if ($housingCode) {
-            $rate = self::$bannerToRateCodes[$housingCode];
-        }
-
-        $ruleId = $rate . $suffix;
-
-        // @todo remove reference to old_id
-        $rule = $ac->getEntityManager()
-            ->getRepository('Tillikum\Entity\Billing\Rule\Rule')
-            ->findOneBy(
-                array(
-                    'old_id' => $ruleId,
-                )
-            );
-
         return array(
             'start' => $start->format('Y-m-d'),
             'end' => $end->format('Y-m-d'),
-            'billing' => array(
-                'rates' => array(
-                    array(
-                        'delete_me' => false,
-                        'rule_id' => $rule ? $rule->id : '',
-                        'start' => $start->format('Y-m-d'),
-                        'end' => $end->format('Y-m-d'),
-                    )
-                ),
-            ),
         );
     }
 
@@ -237,32 +182,18 @@ class DataTablePendingInto extends AbstractHelper
             }
         }
 
-        $rate = '';
+        $em = $ac->getEntityManager();
+
+        $rule = null;
         if ($housingCode === 'IHST') {
-            $rate = 'NTO4H';
-        } else {
-            if ($person->isIntoAcademicEnglish()
-                || $person->isIntoPathways()
-                || $person->isIntoPathwaysGraduate()
-            ) {
-                $rate = 'NTO3AEPW';
-            } elseif ($person->isIntoGeneralEnglish()) {
-                $rate = 'NTO3GE';
-            } elseif ($i['person']['current_program'] === 'SAWE') {
-                $rate = 'NTO3AEPW';
-            }
+            $rule = $em->find('Tillikum\Entity\Billing\Rule\Rule', 57);
+        } elseif ($person->isIntoAcademicEnglish() || $person->isIntoPathways() || $person->isIntoPathwaysGraduate()) {
+            $rule = $em->find('Tillikum\Entity\Billing\Rule\Rule', 52);
+        } elseif ($person->isIntoGeneralEnglish()) {
+            $rule = $em->find('Tillikum\Entity\Billing\Rule\Rule', 53);
+        } elseif ($i['person']['current_program'] === 'SAWE') {
+            $rule = $em->find('Tillikum\Entity\Billing\Rule\Rule', 52);
         }
-
-        $ruleId = $rate;
-
-        // @todo remove reference to old_id
-        $rule = $ac->getEntityManager()
-            ->getRepository('Tillikum\Entity\Billing\Rule\Rule')
-            ->findOneBy(
-                array(
-                    'old_id' => $ruleId,
-                )
-            );
 
         return array(
             'start' => $start->format('Y-m-d'),
