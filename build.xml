@@ -20,31 +20,6 @@
       <arg value="--delete-delay" />
       <arg line="--rsync-path='sudo rsync'" />
       <arg line="--exclude config/*local.config.php" />
-      <arg line="--exclude vendor" />
-    </exec>
-  </target>
-
-  <target name="deploy-vendor">
-    <fail unless="host" message="You need to pass something like -Dhost=... to deploy." />
-
-    <property file="${project.basedir}/deploy.properties" />
-
-    <fail unless="${host}.hostname" message="Missing host configuration for ${host}." />
-    <fail unless="${host}.vendorpath" message="Missing vendor path configuration for ${host}." />
-
-    <property name="hostname" value="${${host}.hostname}" />
-    <property name="path" value="${${host}.vendorpath}" />
-
-    <exec dir="${project.basedir}/../.." executable="rsync" logoutput="true">
-      <arg value="-crlvz" />
-      <arg value="vendor/" />
-      <arg value="${hostname}:${path}" />
-      <arg value="--delete" />
-      <arg value="--delay-updates" />
-      <arg value="--delete-delay" />
-      <arg line="--rsync-path='sudo rsync'" />
-      <arg line="--exclude .git/" />
-      <arg line="--exclude .svn/" />
     </exec>
   </target>
 </project>
