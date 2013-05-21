@@ -15,7 +15,7 @@ syslog(LOG_INFO, 'started');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('EntityManager');
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
 $commonDb = \Uhds_Db::factory('common');
 $intoDb = \Uhds_Db::factory('into');

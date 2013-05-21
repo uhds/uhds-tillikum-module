@@ -17,7 +17,7 @@ syslog(LOG_INFO, 'starting');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('EntityManager');
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
 $getopt = new Console\Getopt(
     array(

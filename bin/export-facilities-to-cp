@@ -17,7 +17,7 @@ syslog(LOG_INFO, 'starting');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('EntityManager');
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
 $tillikumIdsToCpCodes = array(
     '84afa3f6f47f85df75b43079e27631e3' => 'BLS',

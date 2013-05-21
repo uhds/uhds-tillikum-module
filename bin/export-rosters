@@ -35,7 +35,7 @@ syslog(LOG_INFO, 'starting');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('EntityManager');
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
 if (date('n') == 9) {
     $date = new DateTime('fourth Sunday of this month');
