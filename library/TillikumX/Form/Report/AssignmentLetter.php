@@ -12,8 +12,9 @@ namespace TillikumX\Form\Report;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Report\Report as ReportForm;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class AssignmentLetter extends ReportForm
+class AssignmentLetter extends ReportForm implements EntityManagerAwareInterface
 {
     protected $em;
 

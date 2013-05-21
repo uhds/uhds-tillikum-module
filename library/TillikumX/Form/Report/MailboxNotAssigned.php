@@ -12,8 +12,9 @@ namespace TillikumX\Form\Report;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Report\Report as ReportForm;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class MailboxNotAssigned extends ReportForm
+class MailboxNotAssigned extends ReportForm implements EntityManagerAwareInterface
 {
     /**
      * Excluded buildings

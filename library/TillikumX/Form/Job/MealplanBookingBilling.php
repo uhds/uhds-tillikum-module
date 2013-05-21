@@ -12,8 +12,9 @@ namespace TillikumX\Form\Job;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Job\Job as JobForm;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class MealplanBookingBilling extends JobForm
+class MealplanBookingBilling extends JobForm implements EntityManagerAwareInterface
 {
     public function init()
     {
