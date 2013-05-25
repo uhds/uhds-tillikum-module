@@ -45,7 +45,7 @@ if (mb_strlen($inputFileContents, '8bit') < $saneFileSizeThreshold) {
 // Load the XML database
 $students = simplexml_load_string($inputFileContents);
 
-if ($students === false) {
+if (!$students) {
     syslog(LOG_ERR, "unable to parse XML file contents; quitting");
 
     exit(1);
@@ -65,6 +65,12 @@ $majorMap = $db->fetchPairs(
 );
 
 foreach ($students as $student) {
+    if ($student->getName() !== 'student') {
+        syslog(LOG_WARNING, 'Found non-"student" node name');
+
+        continue;
+    }
+
     $db->beginTransaction();
 
     $db->insert(
