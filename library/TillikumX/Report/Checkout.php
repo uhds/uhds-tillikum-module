@@ -23,7 +23,7 @@ class Checkout extends AbstractReport
 
     public function getDescription()
     {
-        return 'Rooms that are ready to be cleaned based on the occupants’ check-out date.';
+        return 'List booking information by a check-out date range.';
     }
 
     public function getFormClass()
@@ -33,7 +33,7 @@ class Checkout extends AbstractReport
 
     public function getName()
     {
-        return 'Check-out';
+        return 'Check-out audit';
     }
 
     public function generate()
@@ -46,52 +46,60 @@ class Checkout extends AbstractReport
 
         $rows = $this->em->createQuery(
             "
-            SELECT MAX(bc.checkout_at) latest_checkout,
-                   COUNT(bc.checkout_at) checkout_count,
-                   COUNT(b.id) booking_count,
-                   fc.name fname, fc.capacity,
-                   fgc.name fgname
+            SELECT p.osuid, p.family_name, p.given_name, p.gender,
+                   fgc.name fgname,
+                   rc.name rname, rc.capacity,
+                   t.name roomtype,
+                   b.start, b.end, b.checkout_at, b.checkout_by
             FROM Tillikum\Entity\Booking\Facility\Facility b
-            LEFT JOIN Tillikum\Entity\Booking\Facility\Facility bc
-                WITH b = bc AND
-                     bc.checkout_at >= :rangeStart AND
-                     bc.checkout_at < :rangeEnd
-            JOIN b.facility f
-            JOIN f.configs fc
-            JOIN f.facility_group fg
+            JOIN TillikumX\Entity\Person\Person p WITH b.person = p
+            JOIN Tillikum\Entity\Facility\Room\Room r WITH b.facility = r
+            JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH r = rc.facility
+            JOIN rc.type t
+            JOIN r.facility_group fg
             JOIN fg.configs fgc
-            WHERE b.start <= :rangeEnd AND
-                  b.end >= :rangeStart AND
-                  fc.start <= b.start AND
-                  fc.end >= b.start AND
+            WHERE b.checkout_at >= :rangeStart AND
+                  b.checkout_at < :rangeEnd AND
+                  rc.start <= b.start AND
+                  rc.end >= b.start AND
                   fgc.start <= b.start AND
                   fgc.end >= b.start
-            GROUP BY f.id
-            HAVING checkout_count >= booking_count
             "
         )
             ->setParameter('rangeStart', $rangeStart)
             ->setParameter('rangeEnd', $rangeEnd)
             ->getResult();
 
-        $ret = array(
-            array(
-                'Latest check-out timestamp',
-                'Facility group',
-                'Facility',
-                'Capacity',
-                'Booking count',
-            )
-        );
+        $ret = [
+            [
+                'OSU ID',
+                'Last name',
+                'First name',
+                'Gender',
+                'Room group',
+                'Room',
+                'Room capacity',
+                'Room type',
+                'Booking start',
+                'Booking end',
+                'Check-out timestamp',
+            ]
+        ];
 
         foreach ($rows as $row) {
-            $ret[] = array(
-                date('Y-m-d H:i:s', date_create($row['latest_checkout'] . 'Z')->format('U')),
+            $ret[] = [
+                $row['osuid'],
+                $row['family_name'],
+                $row['given_name'],
+                $row['gender'],
                 $row['fgname'],
-                $row['fname'],
+                $row['rname'],
                 $row['capacity'],
-                $row['booking_count'],
-            );
+                $row['roomtype'],
+                $row['start']->format('Y-m-d'),
+                $row['end']->format('Y-m-d'),
+                date('Y-m-d H:i:s', $row['checkout_at']->format('U')),
+            ];
         }
 
         return $ret;
