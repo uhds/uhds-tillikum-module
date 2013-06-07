@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Report\Report as ReportForm;
 use Tillikum\ORM\EntityManagerAwareInterface;
 
-class FacilityList extends ReportForm implements EntityManagerAwareInterface
+class RoomList extends ReportForm implements EntityManagerAwareInterface
 {
     protected $em;
 
@@ -25,17 +25,17 @@ class FacilityList extends ReportForm implements EntityManagerAwareInterface
         $date = new \Tillikum_Form_Element_Date(
             'date',
             array(
-                'label' => 'For which date would you like to see facilities?',
-                'required' => true
+                'label' => 'For which date would you like to see rooms?',
+                'required' => true,
             )
         );
 
         $facilityGroups = new \Zend_Form_Element_Multiselect(
             'facility_groups',
             array(
-                'label' => 'Which facility groups would you like to see?',
+                'label' => 'Which buildings would you like to see?',
                 'multiOptions' => array(),
-                'required' => true
+                'required' => true,
             )
         );
 
@@ -53,11 +53,11 @@ class FacilityList extends ReportForm implements EntityManagerAwareInterface
 
         $facilityGroups = $this->em->createQuery(
             "
-            SELECT fg.id, c.name
-            FROM Tillikum\Entity\FacilityGroup\Config\Config c
-            JOIN c.facility_group fg
-            WHERE c.start <= :now and c.end >= :now
-            ORDER BY c.name
+            SELECT fg.id, bc.name
+            FROM Tillikum\Entity\FacilityGroup\Config\Building\Building bc
+            JOIN bc.facility_group fg
+            WHERE :now BETWEEN bc.start AND bc.end
+            ORDER BY bc.name
             "
         )
             ->setParameter('now', new DateTime())

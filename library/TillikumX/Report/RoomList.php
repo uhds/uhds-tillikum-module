@@ -13,7 +13,7 @@ use DateTime;
 use Doctrine\ORM\EntityManager;
 use Tillikum\Report\AbstractReport;
 
-class FacilityList extends AbstractReport
+class RoomList extends AbstractReport
 {
     protected $em;
 
@@ -24,17 +24,17 @@ class FacilityList extends AbstractReport
 
     public function getDescription()
     {
-        return 'List facilities in a given facility group.';
+        return 'List rooms in a given facility group.';
     }
 
     public function getFormClass()
     {
-        return 'TillikumX\Form\Report\FacilityList';
+        return 'TillikumX\Form\Report\RoomList';
     }
 
     public function getName()
     {
-        return 'Facility list';
+        return 'Room list';
     }
 
     public function generate()
@@ -46,20 +46,23 @@ class FacilityList extends AbstractReport
 
         $result = $this->em->createQuery(
             "
-            SELECT f.id, fc.name fname, fc.capacity, fc.gender,
+            SELECT r.id, rc.name rname, rc.capacity, rc.gender, rc.floor, rc.section,
                    CASE WHEN COUNT(tag_ra.id) > 0 THEN 'Y' ELSE 'N' END is_ra,
-                   fgc.name fgname
-            FROM Tillikum\Entity\Facility\Facility f
-            JOIN f.configs fc
-            LEFT JOIN Tillikum\Entity\Facility\Room\Room r WITH f = r
-            LEFT JOIN fc.tags tag_ra WITH tag_ra.id = 'ra'
-            JOIN f.facility_group fg
+                   fgc.name fgname,
+                   s.name sname,
+                   t.name tname
+            FROM Tillikum\Entity\Facility\Room\Room r
+            JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH r = rc.facility
+            JOIN rc.type t
+            JOIN r.facility_group fg
             JOIN fg.configs fgc
+            LEFT JOIN rc.suite s
+            LEFT JOIN rc.tags tag_ra WITH tag_ra.id = 'ra'
             WHERE fg.id IN (:facilityGroupIds) AND
-                  :date BETWEEN fc.start AND fc.end AND
+                  :date BETWEEN rc.start AND rc.end AND
                   :date BETWEEN fgc.start AND fgc.end
-            GROUP BY f.id
-            ORDER BY fgname, fname
+            GROUP BY r.id
+            ORDER BY fgname, rname
             "
         )
             ->setParameter('facilityGroupIds', $facilityGroupIds)
@@ -68,20 +71,28 @@ class FacilityList extends AbstractReport
 
         $ret = [
             [
-                'Facility group',
-                'Facility',
-                'Facility capacity',
-                'Facility gender',
-                'RA Facility?',
+                'Room group',
+                'Room',
+                'Room capacity',
+                'Room gender',
+                'Room type',
+                'Floor',
+                'Section',
+                'Suite',
+                'RA room?',
             ]
         ];
 
         foreach ($result as $row) {
             $ret[] = [
                 $row['fgname'],
-                $row['fname'],
+                $row['rname'],
                 $row['capacity'],
                 $row['gender'],
+                $row['tname'],
+                $row['floor'],
+                $row['section'],
+                $row['sname'],
                 $row['is_ra'],
             ];
         }
