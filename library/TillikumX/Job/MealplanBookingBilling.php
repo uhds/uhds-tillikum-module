@@ -178,11 +178,6 @@ class MealplanBookingBilling extends AbstractJob
                 $processedAmount = 0;
                 try {
                     foreach ($csGoldEvents as $event) {
-                        // @todo process() should not add entries automatically
-                        // so this should be unnecessary. Currently prevents
-                        // problems when flush() is called due to sharing
-                        // a reference with $billingEvents
-                        $event->entries = new ArrayCollection();
                         $entries = $processor->process($event);
 
                         foreach ($entries as $entry) {
