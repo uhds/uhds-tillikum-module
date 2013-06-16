@@ -20,6 +20,8 @@
       <arg value="--delete-delay" />
       <arg line="--rsync-path='sudo rsync'" />
       <arg line="--exclude config/*local.config.php" />
+      <arg line="--exclude .git/" />
+      <arg line="--exclude .svn/" />
     </exec>
   </target>
 </project>
