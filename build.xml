@@ -13,7 +13,7 @@
 
     <exec dir="${project.basedir}/../.." executable="rsync" logoutput="true">
       <arg value="-crlvz" />
-      <arg value="build/" />
+      <arg value="./" />
       <arg value="${hostname}:${path}" />
       <arg value="--delete" />
       <arg value="--delay-updates" />
