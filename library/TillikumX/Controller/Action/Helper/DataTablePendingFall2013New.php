@@ -4,7 +4,7 @@ namespace TillikumX\Controller\Action\Helper;
 
 use DateTime;
 
-class DataTablePendingSpring2013 extends DataTablePendingHousingApplication
+class DataTablePendingFall2013New extends DataTablePendingHousingApplication
 {
     protected static $applicationPlansToTillikum = array(
         'basic' => 'Basic',
@@ -13,44 +13,44 @@ class DataTablePendingSpring2013 extends DataTablePendingHousingApplication
         'ultimate' => 'Ultimate'
     );
 
-    public function dataTablePendingWinter2013()
+    public function dataTablePendingFall2013New()
     {
         return parent::dataTablePendingHousingApplication();
     }
 
     public function direct()
     {
-        return $this->dataTablePendingWinter2013();
+        return $this->dataTablePendingFall2013New();
     }
 
     public function getBookingStartDate()
     {
-        return new DateTime('2013-03-29');
+        return new DateTime('2013-09-24');
     }
 
     public function getBookingEndDate()
     {
-        return new DateTime('2013-06-14');
+        return new DateTime('2014-06-13');
     }
 
     public function fetchApplications()
     {
         $applicationGateway = new \Uhds\Model\HousingApplication\ApplicationGateway();
 
-        return $applicationGateway->fetchProcessedByTemplateId('spring2013');
+        return $applicationGateway->fetchProcessedByTemplateId('fall2013new');
     }
 
     public function getBookingData($application)
     {
         return array(
-            'start' => '2013-03-29',
-            'end' => '2013-06-14',
+            'start' => '2013-09-24',
+            'end' => '2014-06-13',
             'billing' => array(
                 'rates' => array(
                     array(
                         'delete_me' => false,
-                        'start' => '2013-03-31',
-                        'end' => '2013-06-14',
+                        'start' => '2013-09-24',
+                        'end' => '2013-12-13',
                     )
                 ),
             ),
@@ -71,15 +71,15 @@ class DataTablePendingSpring2013 extends DataTablePendingHousingApplication
 
         return array(
             'mealplan_id' => $mealplan->id,
-            'start' => '2013-03-31',
-            'end' => '2013-06-14',
+            'start' => '2013-09-29',
+            'end' => '2013-12-13',
             'billing' => array(
                 'rates' => array(
                     array(
                         'delete_me' => false,
                         'rule_id' => $mealplan->default_billing_rule ? $mealplan->default_billing_rule->id : '',
-                        'start' => '2013-03-31',
-                        'end' => '2013-06-14',
+                        'start' => '2013-09-29',
+                        'end' => '2013-12-13',
                     )
                 ),
             ),

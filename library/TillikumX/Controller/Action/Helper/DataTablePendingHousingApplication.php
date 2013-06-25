@@ -119,20 +119,37 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
             $prefString = implode("\n", $prefArray);
 
             $roommateIds = $rmnGateway->fetchMutualConfirmedIds($application->id);
-            $roommateArray = array();
+            $roommatePersonIds = array();
             foreach ($roommateIds as $roommateId) {
                 list($roommatePersonId, $templateId) = explode('-', $roommateId, 2);
-                $roommateArray[] = array(
-                    'text' => $roommatePersonId,
-                    'uri' => $ac->getHelper('Url')->direct(
-                        'view',
-                        'person',
-                        'person',
-                        array(
-                            'id' => $roommatePersonId,
+                $roommatePersonIds[] = $roommatePersonId;
+            }
+
+            $roommateRowData = array();
+            if (count($roommatePersonIds) > 0) {
+                $roommates = $em->createQuery(
+                    "
+                    SELECT partial p.{id, family_name, given_name, middle_name, display_name, osuid}
+                    FROM TillikumX\Entity\Person\Person p
+                    WHERE p.id IN (:personIds)
+                    "
+                )
+                    ->setParameter('personIds', $roommatePersonIds)
+                    ->getResult();
+
+                foreach ($roommates as $roommate) {
+                    $roommateRowData[] = array(
+                        'text' => sprintf('%s (%s)', $roommate->display_name, $roommate->osuid),
+                        'uri' => $ac->getHelper('Url')->direct(
+                            'view',
+                            'person',
+                            'person',
+                            array(
+                                'id' => $roommate->id,
+                            )
                         )
-                    )
-                );
+                    );
+                }
             }
 
             $ynString = '';
@@ -175,7 +192,7 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
                 'dining_plan' => isset($application->dining) ? $application->dining->plan : '',
                 'preferences' => $prefString,
                 'profile' => $ynString,
-                'roommates' => $roommateArray,
+                'roommates' => $roommateRowData,
                 'application_completed_at' => $application->completed_at,
                 'facility_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
