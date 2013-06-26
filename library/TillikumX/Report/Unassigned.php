@@ -11,6 +11,7 @@ namespace TillikumX\Report;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use PDO;
 use Tillikum\Report\AbstractReport;
 
 class Unassigned extends AbstractReport
@@ -62,7 +63,7 @@ class Unassigned extends AbstractReport
         $sth->execute($queryParameters);
 
         $personIds = array();
-        while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
+        while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
             list($personId, $templateId) = explode('-', $row['id']);
             $personIds[$personId][] = $templateId;
         }
@@ -73,7 +74,8 @@ class Unassigned extends AbstractReport
                 'Application types',
                 'Last name',
                 'First name',
-                'Gender'
+                'Gender',
+                'Tags',
             )
         );
 
@@ -81,26 +83,36 @@ class Unassigned extends AbstractReport
             return $ret;
         }
 
-        $rows = $this->em->createQuery(
-            "
-            SELECT p.id, p.family_name, p.given_name, p.gender, p.osuid
+        $people = $this->em->createQuery(
+            '
+            SELECT PARTIAL p.{id, family_name, given_name, gender, osuid}, tags
             FROM TillikumX\Entity\Person\Person p
             LEFT JOIN p.bookings b WITH :date BETWEEN b.start AND b.end
+            LEFT JOIN p.tags tags
             WHERE b IS NULL
             AND p.id IN (:personIds)
-            "
+            '
         )
             ->setParameter('date', $date)
             ->setParameter('personIds', array_keys($personIds))
             ->getResult();
 
-        foreach ($rows as $row) {
+        foreach ($people as $person) {
             $ret[] = array(
-                $row['osuid'],
-                implode(', ', $personIds[$row['id']]),
-                $row['family_name'],
-                $row['given_name'],
-                $row['gender']
+                $person->osuid,
+                implode(', ', $personIds[$person->id]),
+                $person->family_name,
+                $person->given_name,
+                $person->gender,
+                implode(
+                    ', ',
+                    array_map(
+                        function ($tag) {
+                            return $tag->name;
+                        },
+                        $person->tags->toArray()
+                    )
+                )
             );
         }
 
