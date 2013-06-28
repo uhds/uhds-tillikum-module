@@ -81,13 +81,15 @@ class ApplicantCounts extends AbstractReport
             0
         );
 
+        // @todo Convert to DQL once the housing application has been migrated
+        // to Doctrine
         $returnersAssigned = $conn->fetchColumn(
             "
             SELECT COUNT(*) FROM tillikum_housing_application_application app
             JOIN tillikum_person person ON person.id = $applicationPersonId
             JOIN tillikum_booking_facility booking ON $applicationPersonId = booking.person_id
-            LEFT JOIN tillikum_person_person__tag ra_tag ON $applicationPersonId = ra_tag.person_id AND ra_tag.tag_id = 'ra'
-            LEFT JOIN tillikum_person_person__tag sra_tag ON $applicationPersonId = sra_tag.person_id AND sra_tag.tag_id = 'sra'
+            LEFT JOIN tillikum_person__tag ra_tag ON $applicationPersonId = ra_tag.person_id AND ra_tag.tag_id = 'ra'
+            LEFT JOIN tillikum_person__tag sra_tag ON $applicationPersonId = sra_tag.person_id AND sra_tag.tag_id = 'sra'
             WHERE $applicationTemplateId = ?
             AND app.state = ?
             AND booking.start <= ?
