@@ -102,11 +102,13 @@ class AssignmentLetter extends AbstractReport
         $ret = array(
             array(
                 'OSU ID',
-                'Name',
+                'Last name',
+                'First name',
                 'Gender',
                 'Applications',
                 'Contract signed?',
-                'Assignment',
+                'Facility group name',
+                'Facility name',
                 'Directory email',
                 'Directory phone number',
                 'Booking created',
@@ -115,7 +117,6 @@ class AssignmentLetter extends AbstractReport
                 'Tags',
             )
         );
-
 
         foreach ($rows as $row) {
             $person = $row[0];
@@ -139,11 +140,13 @@ class AssignmentLetter extends AbstractReport
 
             $ret[] = array(
                 $person->osuid,
-                $person->display_name,
+                $person->family_name,
+                $person->given_name,
                 $person->gender,
                 implode(', ', $personIdToApplications[$person->id]),
                 $contractSigned ? 'Y' : 'N',
-                sprintf('%s %s', $row['fgname'], $row['fname']),
+                $row['fgname'],
+                $row['fname'],
                 $row['directory_email_value'],
                 $row['directory_phone_value'],
                 date('Y-m-d H:i:s', $row['created_at']->format('U')),
