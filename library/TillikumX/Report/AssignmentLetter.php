@@ -83,7 +83,7 @@ class AssignmentLetter extends AbstractReport
             JOIN f.facility_group fg
             JOIN fg.configs fgc WITH b.start BETWEEN fgc.start AND fgc.end
             LEFT JOIN p.contract_signatures s
-            JOIN s.contract c WITH c.id = :contractId
+            LEFT JOIN s.contract c WITH c.id = :contractId
             LEFT JOIN p.mealplans mb WITH mb.start >= :date
             LEFT JOIN mb.mealplan m
             LEFT JOIN p.emails directory_email WITH directory_email.type = 'directory'
