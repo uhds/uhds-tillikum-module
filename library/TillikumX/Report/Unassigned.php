@@ -10,6 +10,7 @@
 namespace TillikumX\Report;
 
 use DateTime;
+use DateTimeZone;
 use Doctrine\ORM\EntityManager;
 use PDO;
 use Tillikum\Report\AbstractReport;
@@ -49,7 +50,7 @@ class Unassigned extends AbstractReport
 
         $sth = $conn->prepare(
             "
-            SELECT app.id
+            SELECT app.id, app.completed_at
             FROM tillikum_housing_application_application app
             WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
                   IN ( " . implode(',', array_fill(0, count($applications), '?')) . ") AND
@@ -63,15 +64,20 @@ class Unassigned extends AbstractReport
         $sth->execute($queryParameters);
 
         $personIds = array();
+        $utc = new DateTimeZone('UTC');
         while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
             list($personId, $templateId) = explode('-', $row['id']);
-            $personIds[$personId][] = $templateId;
+            $personIds[$personId] = array(
+                'template_id' => $templateId,
+                'completed_at' => strtotime($row['completed_at'] . 'Z'),
+            );
         }
 
         $ret = array(
             array(
                 'OSU ID',
                 'Application types',
+                'Application completed at',
                 'Last name',
                 'First name',
                 'Gender',
@@ -100,7 +106,8 @@ class Unassigned extends AbstractReport
         foreach ($people as $person) {
             $ret[] = array(
                 $person->osuid,
-                implode(', ', $personIds[$person->id]),
+                implode(', ', $personIds[$person->id]['template_id']),
+                date('Y-m-d H:i:s', $personIds[$person->id]['completed_at']),
                 $person->family_name,
                 $person->given_name,
                 $person->gender,
