@@ -10,7 +10,6 @@
 namespace TillikumX\Report;
 
 use DateTime;
-use DateTimeZone;
 use Doctrine\ORM\EntityManager;
 use PDO;
 use Tillikum\Report\AbstractReport;
@@ -64,7 +63,6 @@ class Unassigned extends AbstractReport
         $sth->execute($queryParameters);
 
         $personIds = array();
-        $utc = new DateTimeZone('UTC');
         while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
             list($personId, $templateId) = explode('-', $row['id']);
             $personIds[$personId] = array(
