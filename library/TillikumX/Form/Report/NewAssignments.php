@@ -19,26 +19,10 @@ class NewAssignments extends ReportForm
         parent::init();
 
         $earliestAppDate = new \Tillikum_Form_Element_Date(
-            'earliest_app_date',
+            'earliest_booking_creation_date',
             array(
-                'label' => 'Earliest application completion date (to be considered ‘new’)?',
-                'required' => true
-            )
-        );
-
-        $startDate = new \Tillikum_Form_Element_Date(
-            'start_date',
-            array(
-                'label' => 'Earliest booking start date?',
-                'required' => true
-            )
-        );
-
-        $endDate = new \Tillikum_Form_Element_Date(
-            'end_date',
-            array(
-                'label' => 'Latest booking start date?',
-                'required' => true
+                'label' => 'Earliest booking creation date?',
+                'required' => true,
             )
         );
 
@@ -67,8 +51,6 @@ class NewAssignments extends ReportForm
         $this->addElements(
             array(
                 $earliestAppDate,
-                $startDate,
-                $endDate,
                 $applications,
             )
         );

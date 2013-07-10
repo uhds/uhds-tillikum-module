@@ -25,7 +25,7 @@ class NewAssignments extends AbstractReport
 
     public function getDescription()
     {
-        return 'Assignments starting between a range of dates where the user has an application that has been completed after a specific date.';
+        return 'Assignments that have been creatd on or after a specified date.';
     }
 
     public function getFormClass()
@@ -44,9 +44,7 @@ class NewAssignments extends AbstractReport
 
         $conn = $this->em->getConnection();
 
-        $earliestAppDate = new DateTime($parameters['earliest_app_date']);
-        $startDate = new DateTime($parameters['start_date']);
-        $endDate = new DateTime($parameters['end_date']);
+        $earliestBookingCreationDate = new DateTime($parameters['earliest_booking_creation_date']);
         $applications = $parameters['applications'];
 
         $sth = $conn->prepare(
@@ -55,15 +53,13 @@ class NewAssignments extends AbstractReport
             FROM tillikum_housing_application_application app
             WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
                   IN ( " . implode(',', array_fill(0, count($applications), '?')) . ") AND
-                  app.state IN (?, ?) AND
-                  app.completed_at >= ?
+                  app.state IN (?, ?)
             "
         );
 
         $queryParameters = $applications;
         $queryParameters[] = 'completed';
         $queryParameters[] = 'processed';
-        $queryParameters[] = gmdate('Y-m-d H:i:s', $earliestAppDate->format('U'));
 
         $sth->execute($queryParameters);
 
@@ -75,34 +71,56 @@ class NewAssignments extends AbstractReport
 
         $rows = $this->em->createQuery(
             "
-            SELECT p.id, p.osuid,
-                   b.start, b.end
+            SELECT p.id, p.osuid, p.family_name, p.given_name, e.value email,
+                   fc.name fname, fgc.name fgname,
+                   b.created_at, b.start, b.end
             FROM TillikumX\Entity\Person\Person p
-            JOIN p.bookings b WITH b.start BETWEEN :startDate AND :endDate
+            JOIN p.emails e
+            JOIN e.type et
+            JOIN p.bookings b
+            JOIN b.facility f
+            JOIN f.configs fc
+            JOIN f.facility_group fg
+            JOIN fg.configs fgc
             WHERE p.id IN (:personIds)
+            AND b.start BETWEEN fc.start AND fc.end
+            AND b.start BETWEEN fgc.start AND fgc.end
+            AND b.created_at >= :createdAt
+            AND et.id = 'directory'
             ORDER BY b.start
             "
         )
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate)
+            ->setParameter('createdAt', $earliestBookingCreationDate)
             ->setParameter('personIds', array_keys($personIds))
             ->getResult();
 
         $ret = array(
             array(
+                'Last name',
+                'First name',
+                'Email',
                 'OSU ID',
-                'Application Type',
+                'Application type',
+                'Facility group',
+                'Facility',
                 'Booking start',
                 'Booking end',
+                'Booking created at',
             )
         );
 
         foreach ($rows as $row) {
             $ret[] = array(
+                $row['family_name'],
+                $row['given_name'],
+                $row['email'],
                 $row['osuid'],
                 implode(', ', $personIds[$row['id']]),
+                $row['fgname'],
+                $row['fname'],
                 $row['start']->format('Y-m-d'),
                 $row['end']->format('Y-m-d'),
+                date('Y-m-d H:i:s', $row['created_at']->format('U')),
             );
         }
 
