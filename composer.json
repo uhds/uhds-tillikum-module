@@ -17,6 +17,10 @@
     "repositories": [
         {
             "type": "vcs",
+            "url": "https://github.com/beberlei/DoctrineExtensions"
+        },
+        {
+            "type": "vcs",
             "url": "https://github.com/gwis/php-valueobjects"
         },
         {
