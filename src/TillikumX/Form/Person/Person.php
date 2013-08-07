@@ -146,12 +146,21 @@ class Person extends PersonForm
             return false;
         }
 
-        if ($data['pidm']) {
-            $onidEntry = $this->onidGateway->fetchByPidm($data['pidm']);
-        } elseif ($data['osuid']) {
-            $onidEntry = $this->onidGateway->fetchByOsuid($data['osuid']);
-        } elseif ($data['onid']) {
-            $onidEntry = $this->onidGateway->fetchByUsername($data['onid']);
+        $newPidm = $data['pidm'];
+        $oldPidm = $this->person ? $this->person->pidm : null;
+
+        $newOsuid = $data['osuid'];
+        $oldOsuid = $this->person ? $this->person->osuid : null;
+
+        $newOnid = $data['onid'];
+        $oldOnid = $this->person ? $this->person->onid : null;
+
+        if ($newPidm && $newPidm !== $oldPidm) {
+            $onidEntry = $this->onidGateway->fetchByPidm($newPidm);
+        } elseif ($newOsuid && $newOsuid !== $oldOsuid) {
+            $onidEntry = $this->onidGateway->fetchByOsuid($newOsuid);
+        } elseif ($newOnid && $newOnid !== $oldOnid) {
+            $onidEntry = $this->onidGateway->fetchByUsername($newOnid);
         } else {
             $data['pidm'] = 'ignore-this-value-' . uniqid();
         }
