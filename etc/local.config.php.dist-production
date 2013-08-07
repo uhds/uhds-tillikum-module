@@ -171,6 +171,7 @@ return array(
                             'TillikumX\Report\NewAssignments',
                             'TillikumX\Report\OccupancyCounts',
                             'TillikumX\Report\OpenSpace',
+                            'TillikumX\Report\RateAudit',
                             'TillikumX\Report\RoomChanges',
                             'TillikumX\Report\RoomList',
                             'TillikumX\Report\Roster',
