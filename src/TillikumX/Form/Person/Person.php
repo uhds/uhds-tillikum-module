@@ -161,7 +161,7 @@ class Person extends PersonForm
             $onidEntry = $this->onidGateway->fetchByOsuid($newOsuid);
         } elseif ($newOnid && $newOnid !== $oldOnid) {
             $onidEntry = $this->onidGateway->fetchByUsername($newOnid);
-        } else {
+        } elseif (!$data['pidm']) {
             $data['pidm'] = 'ignore-this-value-' . uniqid();
         }
 
