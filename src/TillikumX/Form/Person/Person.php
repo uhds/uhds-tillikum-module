@@ -14,15 +14,6 @@ use Tillikum\Form\Person\Person as PersonForm;
 
 class Person extends PersonForm
 {
-    protected $onidGateway;
-
-    public function __construct($options = null)
-    {
-        parent::__construct($options);
-
-        $this->onidGateway = new \Uhds\Model\Ldap\OnidGateway();
-    }
-
     public function bind($person)
     {
         parent::bind($person);
@@ -85,12 +76,13 @@ class Person extends PersonForm
             )
         );
 
-        $onid = new \Uhds_Form_Element_Onid(
+        $onid = new \Zend_Form_Element_Text(
             'onid',
             array(
                 'description' => 'If you enter a value here, it will be' .
                                  ' checked against the ONID database and you' .
                                  ' will not need to add any other fields.',
+                'label' => 'ONID username',
                 'order' => 3,
                 'required' => false,
             )
@@ -146,6 +138,13 @@ class Person extends PersonForm
             return false;
         }
 
+        /*
+         * @todo Figure out a way to inject a configured OnidGateway into this
+         *       form subclass.
+         */
+        $cache = $this->em->getConfiguration()->getMetadataCacheImpl();
+        $onidGateway = new \Uhds\Model\Ldap\OnidGateway($cache);
+
         $newPidm = $data['pidm'];
         $oldPidm = $this->person ? $this->person->pidm : null;
 
@@ -156,11 +155,11 @@ class Person extends PersonForm
         $oldOnid = $this->person ? $this->person->onid : null;
 
         if ($newPidm && $newPidm !== $oldPidm) {
-            $onidEntry = $this->onidGateway->fetchByPidm($newPidm);
+            $onidEntry = $onidGateway->fetchByPidm($newPidm);
         } elseif ($newOsuid && $newOsuid !== $oldOsuid) {
-            $onidEntry = $this->onidGateway->fetchByOsuid($newOsuid);
+            $onidEntry = $onidGateway->fetchByOsuid($newOsuid);
         } elseif ($newOnid && $newOnid !== $oldOnid) {
-            $onidEntry = $this->onidGateway->fetchByUsername($newOnid);
+            $onidEntry = $onidGateway->fetchByUsername($newOnid);
         } elseif (!$data['pidm']) {
             $data['pidm'] = 'ignore-this-value-' . uniqid();
         }
