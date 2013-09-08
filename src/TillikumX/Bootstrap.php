@@ -12,36 +12,52 @@ namespace TillikumX;
 use Zend\Loader\StandardAutoloader;
 use Tillikum\Bootstrap as TillikumBootstrap;
 
+/**
+ * Bootstrap UHDS Tillikum extension
+ */
 class Bootstrap extends TillikumBootstrap
 {
     public function _initExtensionAutoloader()
     {
         $extensionBasePath = __DIR__;
-        $uhdsBasePath = stream_resolve_include_path('Uhds');
 
         $autoloader = new StandardAutoloader(
             array(
                 'namespaces' => array(
                     'TillikumX' => $extensionBasePath,
-                    'Uhds' => $uhdsBasePath,
                 ),
                 /**
                  * @todo remove once all classes are converted to real namespaces
                  */
                 'prefixes' => array(
                     'TillikumX' => $extensionBasePath,
+                ),
+            )
+        );
+        $autoloader->register();
+    }
+
+    public function _initUhdsAutoloader()
+    {
+        $uhdsBasePath = stream_resolve_include_path('Uhds');
+
+        $autoloader = new StandardAutoloader(
+            array(
+                'namespaces' => array(
+                    'Uhds' => $uhdsBasePath,
+                ),
+                /**
+                 * @todo remove once all classes are converted to real namespaces
+                 */
+                'prefixes' => array(
                     'Uhds' => $uhdsBasePath,
                 ),
             )
         );
-
         $autoloader->register();
-    }
 
-    public function _initUtils()
-    {
-        if (!function_exists('id')) {
-            require 'utils.php';
+        if (!function_exists('idx')) {
+            require $uhdsBasePath . '/../../utils.php';
         }
     }
 }
