@@ -28,13 +28,9 @@ class MailboxNotAssigned extends ReportForm implements EntityManagerAwareInterfa
         'd7e9b0536c8fec14ea94e94cb0e63eb9', // APT
         'edc942d7337826aaea7dd4ce4b7d47e9', // AVE
         'b3662bf2d638d950107fe288e1d5055f', // AZL
-        '84afa3f6f47f85df75b43079e27631e3', // BLS
         '68679e6cb5cb13f2a41a88135621941c', // DIX
-        '59ef4021cee6f7899a8c1b2836511798', // FIN
-        'bb26e1550776cd4dff15fdc2efaaa3ed', // HAL
         '1011895cf8086e319a20445b38eaf3c0', // HOME
         'be74ff317e41fb8234bb6f518d372a83', // OXF
-        '8e77483e370b96faa81a1957bb170e1d', // LLC
     );
 
     protected $em;
