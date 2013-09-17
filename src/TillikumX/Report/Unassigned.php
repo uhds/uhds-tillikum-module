@@ -104,7 +104,7 @@ class Unassigned extends AbstractReport
         foreach ($people as $person) {
             $ret[] = array(
                 $person->osuid,
-                implode(', ', $personIds[$person->id]['template_id']),
+                $personIds[$person->id]['template_id'],
                 date('Y-m-d H:i:s', $personIds[$person->id]['completed_at']),
                 $person->family_name,
                 $person->given_name,
