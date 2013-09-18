@@ -159,6 +159,7 @@ return array(
                             'TillikumX\Report\CancellationAudit',
                             'TillikumX\Report\Checkin',
                             'TillikumX\Report\Checkout',
+                            'TillikumX\Report\ContractAudit',
                             'TillikumX\Report\FacilityList',
                             'TillikumX\Report\Holds',
                             'TillikumX\Report\IntoNew',
