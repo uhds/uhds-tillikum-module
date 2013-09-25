@@ -154,6 +154,7 @@ class Person extends PersonForm
         $newOnid = $data['onid'];
         $oldOnid = $this->person ? $this->person->onid : null;
 
+        $onidEntry = null;
         if ($newPidm && $newPidm !== $oldPidm) {
             $onidEntry = $onidGateway->fetchByPidm($newPidm);
         } elseif ($newOsuid && $newOsuid !== $oldOsuid) {
