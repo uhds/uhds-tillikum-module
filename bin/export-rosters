@@ -38,7 +38,7 @@ $serviceManager = $application->getBootstrap()
 $entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
 if (date('n') == 9) {
-    $date = new DateTime('fourth Sunday of this month');
+    $date = new DateTime(date('Y-09-30'));
 } else {
     $date = new DateTime(date('Y-m-d'));
 }
