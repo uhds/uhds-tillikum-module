@@ -25,7 +25,7 @@ class NewAssignments extends AbstractReport
 
     public function getDescription()
     {
-        return 'Assignments that have been creatd on or after a specified date.';
+        return 'Assignments that have been created on or after a specified date.';
     }
 
     public function getFormClass()
