@@ -158,6 +158,7 @@ return array(
                             'TillikumX\Report\BookingEndAudit',
                             'TillikumX\Report\CancellationAudit',
                             'TillikumX\Report\Checkin',
+                            'TillikumX\Report\CheckinRoster',
                             'TillikumX\Report\Checkout',
                             'TillikumX\Report\ContractAudit',
                             'TillikumX\Report\FacilityList',
