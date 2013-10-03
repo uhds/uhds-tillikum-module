@@ -48,7 +48,7 @@ class Roster extends AbstractReport
 
         $rows = $this->em->createQuery(
             "
-            SELECT p,
+            SELECT p, t,
                    rc.name rcname, fgc.name fgcname,
                    rtype.name roomtype,
                    directory_email.value directory_email_value,
@@ -120,19 +120,20 @@ class Roster extends AbstractReport
         if (!empty($ids)) {
             $sth = $conn->prepare(
                 "
-                SELECT application.id
-                FROM tillikum_housing_application_application application
-                JOIN tillikum_housing_application_template template ON SUBSTRING(application.id FROM LOCATE('-', application.id) + 1) = template.id
+                SELECT a.id
+                FROM tillikum_housing_application_application a
+                JOIN tillikum_housing_application_template t
+                     ON SUBSTRING(a.id FROM LOCATE('-', a.id) + 1) = t.id
                 JOIN (
-                    SELECT SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) person_id, MAX(t.effective) template_effective
-                    FROM tillikum_housing_application_application a
-                    JOIN tillikum_housing_application_template t ON SUBSTRING(a.id FROM LOCATE('-', a.id) + 1) = t.id
-                    WHERE a.completed_at IS NOT NULL AND
-                          a.cancelled_at IS NULL AND
-                          t.effective <= '{$date->format('Y-m-d')}' AND
-                          SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
-                    GROUP BY person_id
-                ) AS tm ON SUBSTRING(application.id FROM 1 FOR LOCATE('-', application.id) - 1) = tm.person_id AND template.effective = tm.template_effective
+                    SELECT ai.id, MAX(ai.completed_at) completed_at
+                    FROM tillikum_housing_application_application ai
+                    GROUP BY SUBSTRING(ai.id FROM 1 FOR LOCATE('-', ai.id) - 1)
+                ) ai
+                    ON SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) = SUBSTRING(ai.id FROM 1 FOR LOCATE('-', ai.id) - 1)
+                WHERE a.completed_at = ai.completed_at AND
+                      t.effective <= '{$date->format('Y-m-d')}' AND
+                      a.cancelled_at IS NULL AND
+                      SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
                 "
             );
             $sth->execute($ids);
