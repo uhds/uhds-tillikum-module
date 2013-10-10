@@ -74,7 +74,6 @@ class Roster extends AbstractReport
             LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1'
             LEFT JOIN p.tags t
             WHERE fg.id IN (:facilityGroupIds)
-            GROUP BY p.id
             ORDER BY fgcname, rcname
             "
         )
@@ -120,20 +119,16 @@ class Roster extends AbstractReport
         if (!empty($ids)) {
             $sth = $conn->prepare(
                 "
-                SELECT a.id
+                SELECT a.id, t.effective
                 FROM tillikum_housing_application_application a
                 JOIN tillikum_housing_application_template t
                      ON SUBSTRING(a.id FROM LOCATE('-', a.id) + 1) = t.id
-                JOIN (
-                    SELECT ai.id, MAX(ai.completed_at) completed_at
-                    FROM tillikum_housing_application_application ai
-                    GROUP BY SUBSTRING(ai.id FROM 1 FOR LOCATE('-', ai.id) - 1)
-                ) ai
-                    ON SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) = SUBSTRING(ai.id FROM 1 FOR LOCATE('-', ai.id) - 1)
-                WHERE a.completed_at = ai.completed_at AND
+                WHERE a.completed_at > DATE_SUB(NOW(), INTERVAL 1 YEAR) AND
                       t.effective <= '{$date->format('Y-m-d')}' AND
                       a.cancelled_at IS NULL AND
                       SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
+                GROUP BY SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1)
+                HAVING t.effective = MAX(t.effective)
                 "
             );
             $sth->execute($ids);
