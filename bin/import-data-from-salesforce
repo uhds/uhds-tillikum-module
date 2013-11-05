@@ -17,7 +17,11 @@ syslog(LOG_INFO, 'starting');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
+$tillikumEm = $serviceManager->get('doctrine.entitymanager.orm_default');
+
+$uhdsEm = $application->getBootstrap()
+    ->getResource('Doctrine')
+    ->getEntityManager('uhds');
 
 $getopt = new Console\Getopt(
     array(
@@ -357,7 +361,7 @@ foreach ($rows as $row) {
         );
     }
 
-    $person = $entityManager->getRepository('TillikumX\Entity\Person\Person')
+    $person = $tillikumEm->getRepository('TillikumX\Entity\Person\Person')
         ->findOneByPidm($row['pidm']);
 
     if ($person === null) {
@@ -370,27 +374,39 @@ foreach ($rows as $row) {
         $person->created_by = '_system';
         $person->updated_by = '_system';
 
-        $entityManager->persist($person);
-        $entityManager->flush();
+        $tillikumEm->persist($person);
+        $tillikumEm->flush();
 
         $peopleCreated += 1;
     }
 
-    $appGw = new \Uhds\Model\HousingApplication\ApplicationGateway();
-    $application = $appGw->fetch($person->id, 'into');
+    $template = $uhdsEm->find('Uhds\Entity\HousingApplication\Template\Template', 13);
 
-    if ($application === null) {
-        $application = new \Uhds\Model\HousingApplication\Application();
-        $application->id = $application->getGateway()->generateId($person->id, 'into');
-        $application->state = 'completed';
-        $application->completed_at = new \DateTime();
-        $application->personalprofile = new \Uhds\Model\HousingApplication\Application\Section();
-        $application->personalprofile->is_complete = true;
-        $application->personalprofile->given_name = $row['given_name'];
-        $application->personalprofile->family_name = $row['family_name'];
-        $application->personalprofile->gender = $row['gender'];
+    $applications = $uhdsEm->getRepository('Uhds\Entity\HousingApplication\Application\Application')
+        ->findBy([
+            'personId' => $person->id,
+            'template' => $template,
+        ]);
 
-        $application->save();
+    if (count($applications) === 0) {
+        $application = new \Uhds\Entity\HousingApplication\Application\Application();
+        $application->setPersonId($person->id);
+        $application->setTemplate($template);
+        $application->setState('completed');
+        $application->setNote('');
+        $application->setCreatedAt(new DateTime());
+        $application->setCreatedBy('_system');
+        $application->setUpdatedAt(new DateTime());
+        $application->setUpdatedBy('_system');
+        $uhdsEm->persist($application);
+
+        $completion = new \Uhds\Entity\HousingApplication\Application\Completion();
+        $completion->setApplication($application);
+        $completion->setCreatedAt(new DateTime());
+        $completion->setCreatedBy('_system');
+        $uhdsEm->persist($completion);
+
+        $uhdsEm->flush();
 
         $applicationsCreated += 1;
     }
