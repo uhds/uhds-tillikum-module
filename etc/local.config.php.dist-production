@@ -1,7 +1,5 @@
 <?php
 
-use Tillikum\Navigation;
-
 return array(
     'bootstrap' => array(
         'path' => APPLICATION_PATH . '/site/oregonstate.edu/library/TillikumX/Bootstrap.php',
@@ -22,6 +20,17 @@ return array(
                             )
                         ),
                     ),
+                    'uhds' => array(
+                        'adapterClass' => 'Doctrine\Common\Cache\MemcachedCache',
+                        'namespace' => 'Uhds_',
+                        'options' => array(
+                            'servers' => array(
+                                array(
+                                    'host' => '<REPLACE>',
+                                ),
+                            )
+                        ),
+                    ),
                 ),
             ),
             'dbal' => array(
@@ -32,6 +41,24 @@ return array(
                             'dbname' => '<REPLACE>',
                             'user' => '<REPLACE>',
                             'password' => '<REPLACE>'
+                        ),
+                    ),
+                    'uhds' => array(
+                        'parameters' => array(
+                            'charset' => 'utf8',
+                            'collate' => 'utf8_unicode_ci',
+                            'driver' => 'pdo_mysql',
+                            'dbname' => 'common',
+                            'host' => 'localhost',
+                            'port' => '3306',
+                            'user' => '<REPLACE>',
+                            'password' => '<REPLACE>',
+                            'driverOptions' => array(
+                                \PDO::MYSQL_ATTR_INIT_COMMAND => 'SET CHARACTER SET utf8',
+                            ),
+                        ),
+                        'types' => array(
+                            'utcdatetime' => 'Uhds\DBAL\Types\UTCDateTimeType',
                         ),
                     ),
                 ),
