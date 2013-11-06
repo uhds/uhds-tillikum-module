@@ -60,4 +60,18 @@ class Bootstrap extends TillikumBootstrap
             require $uhdsBasePath . '/../../utils.php';
         }
     }
+
+    public function _initUhdsEntityManager()
+    {
+        $serviceManager = $this->bootstrap('ServiceManager')
+            ->getResource('ServiceManager');
+
+        $doctrineContainer = $this->bootstrap('Doctrine')
+            ->getResource('Doctrine');
+
+        $serviceManager->setService(
+            'doctrine.entitymanager.orm_uhds',
+            $doctrineContainer->getEntityManager('uhds')
+        );
+    }
 }

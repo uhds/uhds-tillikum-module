@@ -18,10 +18,7 @@ $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
 $tillikumEm = $serviceManager->get('doctrine.entitymanager.orm_default');
-
-$uhdsEm = $application->getBootstrap()
-    ->getResource('Doctrine')
-    ->getEntityManager('uhds');
+$uhdsEm = $serviceManager->get('doctrine.entitymanager.orm_uhds');
 
 $getopt = new Console\Getopt(
     array(
