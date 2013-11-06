@@ -35,7 +35,8 @@ syslog(LOG_INFO, 'starting');
 $serviceManager = $application->getBootstrap()
     ->getResource('ServiceManager');
 
-$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
+$tillikumEm = $serviceManager->get('doctrine.entitymanager.orm_default');
+$uhdsEm = $serviceManager->get('doctrine.entitymanager.orm_uhds');
 
 if (date('n') == 9) {
     $date = new DateTime(date('Y-09-30'));
@@ -43,7 +44,7 @@ if (date('n') == 9) {
     $date = new DateTime(date('Y-m-d'));
 }
 
-$activeFacilityGroups = $entityManager->createQuery(
+$activeFacilityGroups = $tillikumEm->createQuery(
     "
     SELECT fg.id, fgc.name
     FROM Tillikum\Entity\FacilityGroup\FacilityGroup fg
@@ -59,7 +60,8 @@ foreach ($activeFacilityGroups as $facilityGroup) {
     $facilityGroupIds[] = $facilityGroup['id'];
 }
 
-$report = new \TillikumX\Report\Roster($entityManager);
+$report = new \TillikumX\Report\Roster($tillikumEm, $uhdsEm);
+
 $report->setParameters(
     array(
         'date' => $date->format('Y-m-d'),
