@@ -74,4 +74,42 @@ class Bootstrap extends TillikumBootstrap
             $doctrineContainer->getEntityManager('uhds')
         );
     }
+
+    public function _initUhdsDependencyInjection()
+    {
+        $serviceManager = $this->bootstrap('ServiceManager')
+            ->getResource('ServiceManager');
+
+        $di = $serviceManager->get('Di');
+
+        /*
+         * Is there a better way to inject separate instances of the same
+         * class like some of the report constructors have?
+         */
+        $uhdsEm = $serviceManager->get('doctrine.entitymanager.orm_uhds');
+
+        $classes = [
+            'TillikumX\Report\ApplicantCounts',
+            'TillikumX\Form\Report\ApplicantCounts',
+            'TillikumX\Report\AssignmentLetter',
+            'TillikumX\Form\Report\AssignmentLetter',
+            'TillikumX\Report\CancellationAudit',
+            'TillikumX\Report\CheckinRoster',
+            'TillikumX\Report\ContractAudit',
+            'TillikumX\Form\Report\LivingLearning',
+            'TillikumX\Report\LivingLearning',
+            'TillikumX\Form\Report\NewAssignments',
+            'TillikumX\Report\NewAssignments',
+            'TillikumX\Report\Roster',
+            'TillikumX\Report\Unassigned',
+            'TillikumX\Form\Report\Unassigned',
+        ];
+
+        foreach ($classes as $class) {
+            $di->instanceManager()->setParameters(
+                $class,
+                ['uhdsEm' => $uhdsEm]
+            );
+        }
+    }
 }

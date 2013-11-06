@@ -15,11 +15,13 @@ use Tillikum\Report\AbstractReport;
 
 class ContractAudit extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -44,7 +46,7 @@ class ContractAudit extends AbstractReport
         $contractId = $parameters['contract'];
         $date = new DateTime($parameters['date']);
 
-        $rows = $this->em->createQuery(
+        $rows = $this->tillikumEm->createQuery(
             "
             SELECT p.id, p.osuid, p.family_name, p.given_name,
                    b.start, b.end,
@@ -72,25 +74,26 @@ class ContractAudit extends AbstractReport
             $personIds[] = $row['id'];
         }
 
-        $conn = $this->em->getConnection();
+        if (empty($personIds)) {
+            $personIds[] = null;
+        }
 
-        $sth = $conn->prepare(
-            "
-            SELECT SUBSTRING(app.id, 1, LOCATE('-', app.id) - 1) person_id,
-                   GROUP_CONCAT(SUBSTRING(app.id, LOCATE('-', app.id) + 1) SEPARATOR ', ') templates
-            FROM tillikum_housing_application_application app
-            WHERE SUBSTRING(app.id, 1, LOCATE('-', app.id) - 1)
-                  IN (" . implode(',', array_fill(0, count($personIds), '?')) . ") AND
-                  app.state = 'processed'
-            GROUP BY SUBSTRING(app.id, 1, LOCATE('-', app.id) - 1)
-            "
-        );
-
-        $sth->execute($personIds);
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  a.personId IN (:personIds)
+            '
+        )
+            ->setParameter('states', ['processed'])
+            ->setParameter('personIds', $personIds)
+            ->getResult();
 
         $personIdToApplicationMap = [];
-        foreach ($sth->fetchAll() as $row) {
-            $personIdToApplicationMap[$row['person_id']] = $row;
+        foreach ($applicationResult as $row) {
+            $personIdToApplicationMap[$row['person_id']][] = $row['slug'];
         }
 
         $ret = [
@@ -109,9 +112,9 @@ class ContractAudit extends AbstractReport
 
         foreach ($rows as $row) {
             if (isset($personIdToApplicationMap[$row['id']])) {
-                $app = $personIdToApplicationMap[$row['id']];
+                $templates = $personIdToApplicationMap[$row['id']];
             } else {
-                $app['templates'] = '';
+                $templates = [];
             }
 
             $isSignatureValid = false;
@@ -121,7 +124,7 @@ class ContractAudit extends AbstractReport
 
             $ret[] = [
                 $row['osuid'],
-                $app['templates'],
+                implode(', ', $templates),
                 $row['family_name'],
                 $row['given_name'],
                 $row['start']->format('Y-m-d'),

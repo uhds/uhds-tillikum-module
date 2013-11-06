@@ -15,11 +15,13 @@ use Tillikum\Report\AbstractReport;
 
 class Roster extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -41,12 +43,10 @@ class Roster extends AbstractReport
     {
         $parameters = $this->getParameters();
 
-        $conn = $this->em->getConnection();
-
         $date = new DateTime($parameters['date']);
         $facilityGroupIds = $parameters['facility_groups'];
 
-        $rows = $this->em->createQuery(
+        $rows = $this->tillikumEm->createQuery(
             "
             SELECT p, t,
                    rc.name rcname, fgc.name fgcname,
@@ -115,27 +115,30 @@ class Roster extends AbstractReport
             }
         }
 
-        $applications = array();
+        $applications = [];
         if (!empty($ids)) {
-            $sth = $conn->prepare(
-                "
-                SELECT a.id, t.effective
-                FROM tillikum_housing_application_application a
-                JOIN tillikum_housing_application_template t
-                     ON SUBSTRING(a.id FROM LOCATE('-', a.id) + 1) = t.id
-                WHERE a.completed_at > DATE_SUB(NOW(), INTERVAL 1 YEAR) AND
-                      t.effective <= '{$date->format('Y-m-d')}' AND
-                      a.cancelled_at IS NULL AND
-                      SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1) IN (" . implode(',', array_fill(0, count($ids), '?')) . ")
-                GROUP BY SUBSTRING(a.id FROM 1 FOR LOCATE('-', a.id) - 1)
+            $result = $this->uhdsEm->createQuery(
+                '
+                SELECT a.personId person_id, t.effective, t.slug
+                FROM Uhds\Entity\HousingApplication\Application\Application a
+                JOIN a.template t
+                JOIN Uhds\Entity\HousingApplication\Application\Completion c WITH c.application = a
+                WHERE a.state NOT IN (:states) AND
+                    c.createdAt > :aYearAgo AND
+                    t.effective <= :date AND
+                    a.personId IN (:personIds)
+                GROUP BY a.personId
                 HAVING t.effective = MAX(t.effective)
-                "
-            );
-            $sth->execute($ids);
+                '
+            )
+                ->setParameter('states', ['canceled'])
+                ->setParameter('aYearAgo', new DateTime('-1 year'))
+                ->setParameter('date', $date)
+                ->setParameter('personIds', $ids)
+                ->getResult();
 
-            while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
-                list($personId, $applicationId) = explode('-', $row['id']);
-                $applications[$personId][] = $applicationId;
+            foreach ($result as $row) {
+                $applications[$row['person_id']][] = $row['slug'];
             }
         }
 

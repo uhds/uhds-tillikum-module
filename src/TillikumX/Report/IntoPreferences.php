@@ -54,7 +54,7 @@ class IntoPreferences extends AbstractReport
             ->join(
                 'into_salesforce_person_reservation',
                 'into_salesforce_person.osuid = into_salesforce_person_reservation.person_osuid',
-                array('start', 'end', 'housing_code', 'notes')
+                array('created_at', 'start', 'end', 'housing_code', 'notes')
             )
             ->where('into_salesforce_person_reservation.start <= ?', $date->format('Y-m-d'))
             ->where('into_salesforce_person_reservation.end >= ?', $date->format('Y-m-d'));
@@ -66,7 +66,7 @@ class IntoPreferences extends AbstractReport
                 'First name',
                 'Gender',
                 'Age',
-                'Application completed date',
+                'Reservation created at',
                 'Country of Origin',
                 'Current program',
                 'Admit program',
@@ -75,13 +75,6 @@ class IntoPreferences extends AbstractReport
                 'Housing preference',
                 'Notes'
             )
-        );
-
-        $applicationStatement = $this->em->getConnection()->prepare(
-            "
-            SELECT application.completed_at FROM tillikum_housing_application_application application
-            WHERE application.id = ?
-            "
         );
 
         foreach ($commonDb->fetchAll($reservationSql) as $row) {
@@ -110,26 +103,13 @@ class IntoPreferences extends AbstractReport
                     '',
                 );
             } else {
-                $applicationStatement->execute(array("{$person->id}-into"));
-
-                $applicationRow = $applicationStatement->fetch(\PDO::FETCH_ASSOC);
-
-                if (isset($applicationRow['completed_at'])) {
-                    $completedAt = date(
-                        'Y-m-d H:i:s',
-                        date_create($applicationRow['completed_at'] . 'Z')->format('U')
-                    );
-                } else {
-                    $completedAt = '';
-                }
-
                 $ret[] = array(
                     $person->osuid,
                     $person->family_name,
                     $person->given_name,
                     $person->gender,
                     $person->age,
-                    $completedAt,
+                    date('Y-m-d H:i:s', strtotime($row['created_at'])),
                     $person->origin_country,
                     $row['current_program'],
                     $row['admit_program'],

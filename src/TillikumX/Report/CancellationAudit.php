@@ -16,11 +16,13 @@ use Tillikum\Report\AbstractReport;
 
 class CancellationAudit extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -45,29 +47,27 @@ class CancellationAudit extends AbstractReport
         $rangeStart = new DateTime($parameters['range_start']);
         $rangeEnd = new DateTime($parameters['range_end']);
 
-        $appStatement = $this->em
-            ->getConnection()
-            ->executeQuery(
-                "
-                SELECT a.id, a.cancelled_code, a.cancelled_at
-                FROM tillikum_housing_application_application a
-                WHERE a.state = 'cancelled' AND
-                      a.cancelled_at >= ? AND a.cancelled_at <= ?
-                ",
-                array(
-                    gmdate('Y-m-d H:i:s', $rangeStart->format('U')),
-                    gmdate('Y-m-d H:i:s', $rangeEnd->format('U')),
-                )
-            );
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug, c.createdAt cancelled_at, c.cancellationCode code
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN Uhds\Entity\HousingApplication\Application\Cancellation c WITH c.application = a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  c.createdAt BETWEEN :rangeStart AND :rangeEnd
+            '
+        )
+            ->setParameter('states', ['canceled'])
+            ->setParameter('rangeStart', $rangeStart)
+            ->setParameter('rangeEnd', $rangeEnd)
+            ->getResult();
 
         $personIdToApplicationMap = array();
-        foreach ($appStatement->fetchAll() as $row) {
-            list($personId, $templateId) = explode('-', $row['id'], 2);
-
-            $personIdToApplicationMap[$personId] = $row;
+        foreach ($applicationResult as $row) {
+            $personIdToApplicationMap[$row['person_id']] = $row;
         }
 
-        $people = $this->em->createQuery(
+        $people = $this->tillikumEm->createQuery(
             "
             SELECT p,
                    mp.name mp_name,
@@ -114,16 +114,14 @@ class CancellationAudit extends AbstractReport
 
             $app = $personIdToApplicationMap[$person->id];
 
-            list($personId, $templateId) = explode('-', $app['id'], 2);
-
             $ret[] = array(
                 $person->osuid,
                 $person->family_name,
                 $person->given_name,
                 $person->gender,
-                $templateId,
-                date('Y-m-d g:i:s a', date_create($app['cancelled_at'], $utc)->format('U')),
-                $app['cancelled_code'],
+                $app['slug'],
+                date('Y-m-d H:i:s', $app['cancelled_at']->format('U')),
+                $app['code'],
                 $row['b_end'] ? $row['b_end']->format('Y-m-d') : '',
                 $row['b_end'] ? $row['fgname'] : '',
                 $row['b_end'] ? $row['fname'] : '',

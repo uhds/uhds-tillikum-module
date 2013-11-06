@@ -15,11 +15,13 @@ use Tillikum\Report\AbstractReport;
 
 class AssignmentLetter extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -39,35 +41,31 @@ class AssignmentLetter extends AbstractReport
 
     public function generate()
     {
-        $conn = $this->em->getConnection();
         $parameters = $this->getParameters();
 
-        $applications = $parameters['applications'];
+        $templateIds = $parameters['applications'];
         $contractId = $parameters['contract'];
         $startDate = new DateTime($parameters['start_date']);
 
-        $sth = $conn->prepare(
-            "
-            SELECT app.id
-            FROM tillikum_housing_application_application app
-            WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
-                  IN ( " . implode(',', array_fill(0, count($applications), '?')) . ") AND
-                  app.state = ?
-            "
-        );
-
-        $queryParameters = $applications;
-        $queryParameters[] = 'processed';
-
-        $sth->execute($queryParameters);
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  t.id IN (:templateIds)
+            '
+        )
+            ->setParameter('states', ['processed'])
+            ->setParameter('templateIds', $templateIds)
+            ->getScalarResult();
 
         $personIdToApplications = array();
-        while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
-            list($personId, $templateId) = explode('-', $row['id']);
-            $personIdToApplications[$personId][] = $templateId;
+        foreach ($applicationResult as $row) {
+            $personIdToApplications[$row['person_id']][] = $row['slug'];
         }
 
-        $rows = $this->em->createQuery(
+        $rows = $this->tillikumEm->createQuery(
             "
             SELECT p,
                    b.created_at,

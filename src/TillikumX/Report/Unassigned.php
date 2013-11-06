@@ -16,11 +16,13 @@ use Tillikum\Report\AbstractReport;
 
 class Unassigned extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -42,32 +44,30 @@ class Unassigned extends AbstractReport
     {
         $parameters = $this->getParameters();
 
-        $conn = $this->em->getConnection();
-
-        $applications = $parameters['applications'];
+        $templateIds = $parameters['applications'];
         $date = new DateTime($parameters['date']);
 
-        $sth = $conn->prepare(
-            "
-            SELECT app.id, app.completed_at
-            FROM tillikum_housing_application_application app
-            WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
-                  IN ( " . implode(',', array_fill(0, count($applications), '?')) . ") AND
-                  app.state = ?
-            "
-        );
-
-        $queryParameters = $applications;
-        $queryParameters[] = 'processed';
-
-        $sth->execute($queryParameters);
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug, c.createdAt completed_at
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN Uhds\Entity\HousingApplication\Application\Completion c WITH c.application = a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  t.id IN (:templateIds)
+            GROUP BY a.personId
+            HAVING c.createdAt = MAX(c.createdAt)
+            '
+        )
+            ->setParameter('states', ['processed'])
+            ->setParameter('templateIds', $templateIds)
+            ->getResult();
 
         $personIds = array();
-        while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
-            list($personId, $templateId) = explode('-', $row['id']);
-            $personIds[$personId] = array(
-                'template_id' => $templateId,
-                'completed_at' => strtotime($row['completed_at'] . 'Z'),
+        foreach ($applicationResult as $row) {
+            $personIds[$row['person_id']] = array(
+                'template_id' => $row['slug'],
+                'completed_at' => $row['completed_at'],
             );
         }
 
@@ -87,7 +87,7 @@ class Unassigned extends AbstractReport
             return $ret;
         }
 
-        $people = $this->em->createQuery(
+        $people = $this->tillikumEm->createQuery(
             '
             SELECT PARTIAL p.{id, family_name, given_name, gender, osuid}, tags
             FROM TillikumX\Entity\Person\Person p
@@ -105,7 +105,7 @@ class Unassigned extends AbstractReport
             $ret[] = array(
                 $person->osuid,
                 $personIds[$person->id]['template_id'],
-                date('Y-m-d H:i:s', $personIds[$person->id]['completed_at']),
+                date('Y-m-d H:i:s', $personIds[$person->id]['completed_at']->format('U')),
                 $person->family_name,
                 $person->given_name,
                 $person->gender,

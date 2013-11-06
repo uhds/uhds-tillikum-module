@@ -9,18 +9,20 @@
 
 namespace TillikumX\Report;
 
-use ArrayIterator;
 use DateTime;
 use Doctrine\ORM\EntityManager;
-use LimitIterator;
 use Tillikum\Report\AbstractReport;
 use Vo\DateRange;
 
 class NewAssignments extends AbstractReport
 {
-    public function __construct(EntityManager $em)
+    private $tillikumEm;
+    private $uhdsEm;
+
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -42,34 +44,28 @@ class NewAssignments extends AbstractReport
     {
         $parameters = $this->getParameters();
 
-        $conn = $this->em->getConnection();
-
         $earliestBookingCreationDate = new DateTime($parameters['earliest_booking_creation_date']);
-        $applications = $parameters['applications'];
+        $templateIds = $parameters['applications'];
 
-        $sth = $conn->prepare(
-            "
-            SELECT app.id
-            FROM tillikum_housing_application_application app
-            WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
-                  IN ( " . implode(',', array_fill(0, count($applications), '?')) . ") AND
-                  app.state IN (?, ?)
-            "
-        );
-
-        $queryParameters = $applications;
-        $queryParameters[] = 'completed';
-        $queryParameters[] = 'processed';
-
-        $sth->execute($queryParameters);
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  t.id IN (:templateIds)
+            '
+        )
+            ->setParameter('states', ['completed', 'processed'])
+            ->setParameter('templateIds', $templateIds)
+            ->getResult();
 
         $personIds = array();
-        while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
-            list($personId, $templateId) = explode('-', $row['id']);
-            $personIds[$personId][] = $templateId;
+        foreach ($applicationResult as $row) {
+            $personIds[$row['person_id']][] = $row['slug'];
         }
 
-        $rows = $this->em->createQuery(
+        $rows = $this->tillikumEm->createQuery(
             "
             SELECT p.id, p.osuid, p.family_name, p.given_name, e.value email,
                    fc.name fname, fgc.name fgname,

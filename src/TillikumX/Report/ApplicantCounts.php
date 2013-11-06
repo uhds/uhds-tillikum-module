@@ -15,11 +15,13 @@ use Tillikum\Report\AbstractReport;
 
 class ApplicantCounts extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -39,7 +41,6 @@ class ApplicantCounts extends AbstractReport
 
     public function generate()
     {
-        $conn = $this->em->getConnection();
         $parameters = $this->getParameters();
 
         $newApplication = $parameters['new_application'];
@@ -47,78 +48,87 @@ class ApplicantCounts extends AbstractReport
         $date = new DateTime($parameters['date']);
         $openingDate = new DateTime($parameters['opening_date']);
 
-        $applicationPersonId = 'SUBSTRING_INDEX(app.id, \'-\', 1)';
-        $applicationTemplateId = 'SUBSTRING_INDEX(app.id, \'-\', -(1))'; 
+        $numberCompletedByDate = $this->uhdsEm->createQuery(
+            '
+            SELECT COUNT(DISTINCT a.id)
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN Uhds\Entity\HousingApplication\Application\Completion c WITH c.application = a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  c.createdAt <= :completedAt AND
+                  t.id = :templateId
+            '
+        )
+            ->setParameter('states', ['completed', 'processed'])
+            ->setParameter('completedAt', $date)
+            ->setParameter('templateId', $newApplication)
+            ->getSingleScalarResult();
 
-        $numberCompletedByDate = $conn->fetchColumn(
-            "
-            SELECT COUNT(*) FROM tillikum_housing_application_application app
-            WHERE state IN (?, ?)
-            AND completed_at <= ?
-            AND $applicationTemplateId = ?
-            ",
-            array(
-                'completed',
-                'processed',
-                gmdate('Y-m-d H:i:s', $date->format('U')),
-                $newApplication,
-            ),
-            0
-        );
+        $numberCanceledByDate = $this->uhdsEm->createQuery(
+            '
+            SELECT COUNT(DISTINCT a.id)
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN Uhds\Entity\HousingApplication\Application\Cancellation c WITH c.application = a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  c.createdAt <= :canceledAt AND
+                  t.id = :templateId
+            '
+        )
+            ->setParameter('states', ['canceled'])
+            ->setParameter('canceledAt', $date)
+            ->setParameter('templateId', $newApplication)
+            ->getSingleScalarResult();
 
-        $numberCancelledByDate = $conn->fetchColumn(
-            "
-            SELECT COUNT(*) FROM tillikum_housing_application_application app
-            WHERE state = ?
-            AND cancelled_at <= ?
-            AND $applicationTemplateId = ?
-            ",
-            array(
-                'cancelled',
-                gmdate('Y-m-d H:i:s', $date->format('U')),
-                $newApplication,
-            ),
-            0
-        );
+        $result = $this->tillikumEm->createQuery(
+            '
+            SELECT p.id
+            FROM Tillikum\Entity\Person\Person p
+            JOIN p.bookings b
+            LEFT JOIN p.tags t_ra WITH t_ra.id = \'ra\'
+            LEFT JOIN p.tags t_sra WITH t_sra.id = \'sra\'
+            WHERE :openingDate BETWEEN b.start AND b.end AND
+                  t_ra.id IS NULL AND
+                  t_sra.id IS NULL
+            '
+        )
+            ->setParameter('openingDate', $openingDate)
+            ->getScalarResult();
 
-        // @todo Convert to DQL once the housing application has been migrated
-        // to Doctrine
-        $returnersAssigned = $conn->fetchColumn(
-            "
-            SELECT COUNT(*) FROM tillikum_housing_application_application app
-            JOIN tillikum_person person ON person.id = $applicationPersonId
-            JOIN tillikum_booking_facility booking ON $applicationPersonId = booking.person_id
-            LEFT JOIN tillikum_person__tag ra_tag ON $applicationPersonId = ra_tag.person_id AND ra_tag.tag_id = 'ra'
-            LEFT JOIN tillikum_person__tag sra_tag ON $applicationPersonId = sra_tag.person_id AND sra_tag.tag_id = 'sra'
-            WHERE $applicationTemplateId = ?
-            AND app.state = ?
-            AND booking.start <= ?
-            AND booking.end >= ?
-            AND ra_tag.person_id IS NULL
-            AND sra_tag.person_id IS NULL
-            ",
-            array(
-                $returnerApplication,
-                'processed',
-                $openingDate->format('Y-m-d'),
-                $openingDate->format('Y-m-d'),
-            ),
-            0
-        );
+        $personIds = array_map('current', $result);
 
-        $ret = array(
-            array(
+        if (empty($personIds)) {
+            $personIds[] = null;
+        }
+
+        $returnersAssigned = $this->uhdsEm->createQuery(
+            '
+            SELECT COUNT(DISTINCT a.id)
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  a.personId IN (:personIds) AND
+                  t.id = :templateId
+            '
+        )
+            ->setParameter('states', ['processed'])
+            ->setParameter('personIds', $personIds)
+            ->setParameter('templateId', $returnerApplication)
+            ->getSingleScalarResult();
+
+        $ret = [
+            [
                 'Number of completed new applications as of ' . $date->format('n/j/Y'),
                 'Number of cancelled new applications as of ' . $date->format('n/j/Y'),
-                'Number of assigned returners (non-RA)'
-            )
-        );
+                'Number of assigned returners (non-RA)',
+            ]
+        ];
 
-        $ret[] = array(
+        $ret[] = [
             $numberCompletedByDate,
-            $numberCancelledByDate,
-            $returnersAssigned
-        );
+            $numberCanceledByDate,
+            $returnersAssigned,
+        ];
 
         return $ret;
     }

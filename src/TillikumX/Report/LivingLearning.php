@@ -15,11 +15,13 @@ use Tillikum\Report\AbstractReport;
 
 class LivingLearning extends AbstractReport
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
 
-    public function __construct(EntityManager $em)
+    public function __construct(EntityManager $tillikumEm, EntityManager $uhdsEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
+        $this->uhdsEm = $uhdsEm;
     }
 
     public function getDescription()
@@ -39,35 +41,31 @@ class LivingLearning extends AbstractReport
 
     public function generate()
     {
-        $conn = $this->em->getConnection();
         $parameters = $this->getParameters();
 
-        $applicationIds = $parameters['applications'];
+        $templateIds = $parameters['applications'];
         $contractIds = $parameters['contracts'];
         $date = new DateTime($parameters['date']);
 
-        $sth = $conn->prepare(
-            "
-            SELECT app.id
-            FROM tillikum_housing_application_application app
-            WHERE SUBSTRING(app.id FROM LOCATE('-', app.id) + 1)
-                  IN ( " . implode(',', array_fill(0, count($applicationIds), '?')) . ") AND
-                  app.state = ?
-            "
-        );
-
-        $queryParameters = $applicationIds;
-        $queryParameters[] = 'processed';
-
-        $sth->execute($queryParameters);
+        $applicationResult = $this->uhdsEm->createQuery(
+            '
+            SELECT a.personId person_id, t.slug
+            FROM Uhds\Entity\HousingApplication\Application\Application a
+            JOIN a.template t
+            WHERE a.state IN (:states) AND
+                  t.id IN (:templateIds)
+            '
+        )
+            ->setParameter('states', ['processed'])
+            ->setParameter('templateIds', $templateIds)
+            ->getResult();
 
         $personIds = array();
-        while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
-            list($personId, $templateId) = explode('-', $row['id']);
-            $personIds[$personId][] = $templateId;
+        foreach ($applicationResult as $row) {
+            $personIds[$row['person_id']][] = $row['slug'];
         }
 
-        $rows = $this->em->createQuery(
+        $rows = $this->tillikumEm->createQuery(
             "
             SELECT p.id, p.family_name, p.given_name, p.osuid, p.onid,
                    b.start booking_start, b.end booking_end,
@@ -144,7 +142,7 @@ class LivingLearning extends AbstractReport
             )
         );
 
-        $roommateQuery = $this->em->createQuery(
+        $roommateQuery = $this->tillikumEm->createQuery(
             "
             SELECT p.family_name, p.given_name, p.onid
             FROM TillikumX\Entity\Person\Person p

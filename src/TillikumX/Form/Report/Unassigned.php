@@ -10,23 +10,39 @@
 namespace TillikumX\Form\Report;
 
 use DateTime;
+use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Report\Report as ReportForm;
 
 class Unassigned extends ReportForm
 {
+    private $uhdsEm;
+
+    public function __construct(EntityManager $uhdsEm)
+    {
+        $this->uhdsEm = $uhdsEm;
+
+        parent::__construct();
+    }
+
     public function init()
     {
         parent::init();
 
-        $templateGateway = new \Uhds\Model\HousingApplication\TemplateGateway();
-        $templates = $templateGateway->fetchManyByEnd(new DateTime('-1 year'), '>=');
+        $templates = $this->uhdsEm->createQuery(
+            '
+            SELECT t.id, t.name
+            FROM Uhds\Entity\HousingApplication\Template\Template t
+            WHERE t.end >= :date
+            ORDER BY t.name
+            '
+        )
+            ->setParameter('date', new DateTime('-1 year'))
+            ->getResult();
 
-        $housingApplicationOptions = array();
+        $housingApplicationOptions = [];
         foreach ($templates as $template) {
-            $housingApplicationOptions[$template->id] = $template->name;
+            $housingApplicationOptions[$template['id']] = $template['name'];
         }
-
-        natsort($housingApplicationOptions);
 
         $applications = new \Zend_Form_Element_Multiselect(
             'applications',

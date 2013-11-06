@@ -16,7 +16,15 @@ use Tillikum\ORM\EntityManagerAwareInterface;
 
 class AssignmentLetter extends ReportForm implements EntityManagerAwareInterface
 {
-    protected $em;
+    private $tillikumEm;
+    private $uhdsEm;
+
+    public function __construct(EntityManager $uhdsEm)
+    {
+        $this->uhdsEm = $uhdsEm;
+
+        parent::__construct();
+    }
 
     public function init()
     {
@@ -30,15 +38,21 @@ class AssignmentLetter extends ReportForm implements EntityManagerAwareInterface
             )
         );
 
-        $templateGateway = new \Uhds\Model\HousingApplication\TemplateGateway();
-        $templates = $templateGateway->fetchManyByEnd(new \DateTime('-1 year'), '>=');
+        $templates = $this->uhdsEm->createQuery(
+            '
+            SELECT t.id, t.name
+            FROM Uhds\Entity\HousingApplication\Template\Template t
+            WHERE t.end >= :date
+            ORDER BY t.name
+            '
+        )
+            ->setParameter('date', new DateTime('-1 year'))
+            ->getResult();
 
-        $housingApplicationOptions = array();
+        $housingApplicationOptions = [];
         foreach ($templates as $template) {
-            $housingApplicationOptions[$template->id] = $template->name;
+            $housingApplicationOptions[$template['id']] = $template['name'];
         }
-
-        natsort($housingApplicationOptions);
 
         $applications = new \Zend_Form_Element_Multiselect(
             'applications',
@@ -70,11 +84,11 @@ class AssignmentLetter extends ReportForm implements EntityManagerAwareInterface
         );
     }
 
-    public function setEntityManager(EntityManager $em)
+    public function setEntityManager(EntityManager $tillikumEm)
     {
-        $this->em = $em;
+        $this->tillikumEm = $tillikumEm;
 
-        $contracts = $this->em->createQuery(
+        $contracts = $this->tillikumEm->createQuery(
             "
             SELECT c.id, c.name
             FROM Tillikum\Entity\Contract\Contract c
