@@ -66,7 +66,7 @@ foreach ($bannerRows as $bannerRow) {
 
     $updatedAddress = false;
     foreach ($person->addresses as $address) {
-        if ($address->type->id === 'directory') {
+        if ($address->type === $directoryType) {
             $address->street = trim(implode("\n", array($bannerRow['address1'], $bannerRow['address2'])));
             $address->locality = $bannerRow['city'];
             $address->region = $bannerRow['state'];
@@ -94,9 +94,11 @@ foreach ($bannerRows as $bannerRow) {
         $entityManager->persist($address);
     }
 
+    $emailCount = count($person->emails);
     $updatedEmail = false;
     foreach ($person->emails as $email) {
-        if ($email->type->id === 'directory') {
+        if ($email->type === $directoryType) {
+            $email->is_primary = $emailCount === 1;
             $email->value = $bannerRow['email'];
             $email->updated_by = '_system';
 
@@ -107,7 +109,7 @@ foreach ($bannerRows as $bannerRow) {
     if (!$updatedEmail) {
         $email = new \Tillikum\Entity\Person\Address\Email();
         $email->person = $person;
-        $email->is_primary = false;
+        $email->is_primary = $emailCount <= 1;
         $email->type = $directoryType;
         $email->value = $bannerRow['email'];
         $email->created_by = '_system';
@@ -116,9 +118,11 @@ foreach ($bannerRows as $bannerRow) {
         $entityManager->persist($email);
     }
 
+    $phoneCount = count($person->phone_numbers);
     $updatedPhone = false;
     foreach ($person->phone_numbers as $phoneNumber) {
-        if ($phoneNumber->type->id === 'directory') {
+        if ($phoneNumber->type === $directoryType) {
+            $phoneNumber->is_primary = $phoneCount === 1;
             $phoneNumber->value = $bannerRow['phone'];
             $phoneNumber->updated_by = '_system';
 
@@ -129,7 +133,7 @@ foreach ($bannerRows as $bannerRow) {
     if (!$updatedPhone) {
         $phoneNumber = new \Tillikum\Entity\Person\Address\PhoneNumber();
         $phoneNumber->person = $person;
-        $phoneNumber->is_primary = false;
+        $phoneNumber->is_primary = $phoneCount <= 1;
         $phoneNumber->type = $directoryType;
         $phoneNumber->value = $bannerRow['phone'];
         $phoneNumber->created_by = '_system';
