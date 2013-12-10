@@ -9,7 +9,7 @@
       <th>Dining plan</th>
       <th>Building preferences</th>
       <th>Profile answers</th>
-      <th>Rooommates</th>
+      <th>Roommates</th>
       <th>Application completed at</th>
       <th>Facility booking</th>
       <th>Meal plan booking</th>
@@ -25,11 +25,7 @@
       <td><?php echo $this->escape($row['dining_plan']) ?></td>
       <td><?php echo nl2br($this->escape($row['preferences'])) ?></td>
       <td><?php echo $this->escape($row['profile']) ?></td>
-      <td>
-    <?php foreach ($row['roommates'] as $roommate): ?>
-        <a href="<?php echo $roommate['uri'] ?>"><?php echo $this->escape($roommate['text']) ?></a><br>
-    <?php endforeach ?>
-      </td>
+      <td>Not implemented yet.</td>
       <td><?php echo $this->markupDateTime($row['application_completed_at']) ?></td>
       <td><a href="<?php echo $this->escape($row['facility_booking_uri']) ?>">Book</a></td>
       <td><a href="<?php echo $this->escape($row['mealplan_booking_uri']) ?>">Book</a></td>
