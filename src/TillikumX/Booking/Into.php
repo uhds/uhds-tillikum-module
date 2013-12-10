@@ -14,6 +14,8 @@ use Tillikum\Booking\AbstractPendingBooking;
 class Into extends AbstractPendingBooking
 {
     /**
+     * {@inheritdoc}
+     *
      * @return string
      */
     public function getActionHelperName()
@@ -22,6 +24,8 @@ class Into extends AbstractPendingBooking
     }
 
     /**
+     * {@inheritdoc}
+     *
      * @return string
      */
     public function getDescription()
@@ -30,6 +34,8 @@ class Into extends AbstractPendingBooking
     }
 
     /**
+     * {@inheritdoc}
+     *
      * @return string
      */
     public function getName()
@@ -38,6 +44,8 @@ class Into extends AbstractPendingBooking
     }
 
     /**
+     * {@inheritdoc}
+     *
      * @return string
      */
     public function getViewHelperName()

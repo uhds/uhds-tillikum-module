@@ -13,50 +13,45 @@ class DataTablePendingInto extends AbstractHelper
         $ac = $this->_actionController;
         $view = $ac->view;
 
-        // Fetch Salesforce reservation information
+        $sm = $ac->getServiceManager();
+
         $commonDb = \Uhds_Db::factory('common');
+        $tillikumEm = $sm->get('doctrine.entitymanager.orm_default');
+        $uhdsEm = $sm->get('doctrine.entitymanager.orm_uhds');
 
         $reservationSql = $commonDb->select()
-            ->from('into_salesforce_person', array('osuid'))
+            ->from('into_salesforce_person', ['osuid', 'is_smoker'])
             ->where('into_salesforce_person.osuid IN (?)', $commonDb->select()
                 ->from('into_salesforce_person_reservation', 'person_osuid')
                 ->where('end >= ?', date('Y-m-d'))
             );
 
-        $reservationRowByOsuids = array();
+        $reservationRowByOsuids = [];
         foreach ($commonDb->fetchAll($reservationSql) as $row) {
             $reservationRowByOsuids[$row['osuid']] = $row;
         }
 
-        $applicationGateway = new \Uhds\Model\HousingApplication\ApplicationGateway();
-
-        $rows = array();
+        $rows = [];
         foreach ($reservationRowByOsuids as $osuid => $row) {
-            $person = $ac->getEntityManager()
-                ->getRepository('TillikumX\Entity\Person\Person')
+            $person = $tillikumEm->getRepository('TillikumX\Entity\Person\Person')
                 ->findOneByOsuid($osuid);
 
             if ($person === null) {
                 continue;
             }
 
-            $application = $applicationGateway->fetch(
-                $applicationGateway->generateId($person->id, 'into')
-            );
+            $application = $uhdsEm->getRepository('Uhds\Entity\HousingApplication\Application\Application')
+                ->findOneBy([
+                    'personId' => $person->id,
+                    'template' => 13,
+                    'state' => 'processed',
+                ]);
 
-            // Skip if the application doesn't exist or isn't processed
-            if ($application === null || !$application->isProcessed()) {
+            if (!$application) {
                 continue;
             }
 
-            $isSmoker = null;
-            if (isset($application->roommateprofile)) {
-                foreach ($application->roommateprofile->toArray() as $k => $v) {
-                    if (substr($k, 0, 3) === 'yn_') {
-                        $isSmoker = substr($v, 0, 1) === 'y' ? true : false;
-                    }
-                }
-            }
+            $isSmoker = (bool) $row['is_smoker'] ? 'Yes' : 'No';
 
             $reservationRange = new DateRange(
                 $person->getIntoHousingStart(),
@@ -88,7 +83,7 @@ class DataTablePendingInto extends AbstractHelper
             }
 
             $facilityBookingQueryString = http_build_query(
-                array(
+                [
                     'json' => json_encode(
                         $this->getBookingData(
                             $reservationRange->getStart(),
@@ -96,11 +91,11 @@ class DataTablePendingInto extends AbstractHelper
                             $person
                         )
                     )
-                )
+                ]
             );
 
             $mealplanBookingQueryString = http_build_query(
-                array(
+                [
                     'json' => json_encode(
                         $this->getMealplanData(
                             $reservationRange->getStart(),
@@ -108,45 +103,45 @@ class DataTablePendingInto extends AbstractHelper
                             $person
                         )
                     )
-                )
+                ]
             );
 
-            $rows[] = array(
+            $rows[] = [
                 'person_uri' => $ac->getHelper('Url')->direct(
                     'view',
                     'person',
                     'person',
-                    array(
+                    [
                         'id' => $person->id
-                    )
+                    ]
                 ),
                 'name' => $person ? $person->display_name : '',
                 'osuid' => $person ? $person->osuid : '',
-                'age' => $person ? date_diff($person->birthdate ?: new DateTime(date('Y-m-d')), new DateTime(date('Y-m-d')))->y : '',
+                'age' => ($person && $person->birthdate) ? date_diff($person->birthdate, new DateTime(date('Y-m-d')))->y : '',
                 'gender' => $person ? $person->gender : '',
                 'booking_start' => isset($bookingRange) ? $bookingRange->getStart() : null,
                 'booking_end' => isset($bookingRange) ? $bookingRange->getEnd() : null,
                 'reservation_start' => $reservationRange->getStart(),
                 'reservation_end' => $reservationRange->getEnd(),
-                'is_smoker' => $isSmoker === null ? '?' : ($isSmoker ? 'Y' : 'N'),
+                'is_smoker' => $isSmoker,
                 'housing_code' => isset($person) ? $person->getIntoHousingCode() : '',
                 'facility_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
                     'create',
                     'booking',
-                    array(
+                    [
                         'pid' => $person ? $person->id : '',
-                    )
+                    ]
                 ) . '?' . $view->escape($facilityBookingQueryString),
                 'mealplan_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
                     'create',
                     'mealplan',
-                    array(
+                    [
                         'pid' => $person ? $person->id : '',
-                    )
+                    ]
                 ) . '?' . $view->escape($mealplanBookingQueryString),
-            );
+            ];
         }
 
         return $rows;
@@ -159,12 +154,10 @@ class DataTablePendingInto extends AbstractHelper
 
     public function getBookingData(DateTime $start, DateTime $end, $person)
     {
-        $ac = $this->_actionController;
-
-        return array(
+        return [
             'start' => $start->format('Y-m-d'),
             'end' => $end->format('Y-m-d'),
-        );
+        ];
     }
 
     public function getMealplanData(DateTime $start, DateTime $end, $person)
@@ -195,19 +188,19 @@ class DataTablePendingInto extends AbstractHelper
             $rule = $em->find('Tillikum\Entity\Billing\Rule\Rule', 52);
         }
 
-        return array(
+        return [
             'start' => $start->format('Y-m-d'),
             'end' => $end->format('Y-m-d'),
-            'billing' => array(
-                'rates' => array(
-                    array(
+            'billing' => [
+                'rates' => [
+                    [
                         'delete_me' => false,
                         'rule_id' => $rule ? $rule->id : '',
                         'start' => $start->format('Y-m-d'),
                         'end' => $end->format('Y-m-d'),
-                    ),
-                ),
-            ),
-        );
+                    ],
+                ],
+            ],
+        ];
     }
 }
