@@ -112,11 +112,19 @@ class OpenSpace extends AbstractReport
 
                 $people = array();
                 foreach ($result as $personResult) {
+                    $age = '?';
+                    if ($personResult['birthdate']) {
+                        $age = date_diff(
+                            $personResult['birthdate'],
+                            new \DateTime(date('Y-m-d'))
+                        )->y;
+                    }
+
                     $people[] = sprintf(
                         '%s, %s (%s/%s)',
                         $personResult['family_name'],
                         $personResult['given_name'],
-                        date_diff($personResult['birthdate'], new \DateTime(date('Y-m-d')))->y,
+                        $age,
                         $personResult['gender']
                     );
                 }
