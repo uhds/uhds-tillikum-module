@@ -141,8 +141,8 @@ class FacilityBookingBilling extends AbstractJob
                         $rate->start->format('Y-m-d'),
                         $rate->end->format('Y-m-d'),
                         $billing->id,
-                        $billing->through ? $creditEvent->end->format('Y-m-d') : '',
-                        $chargeEvent->end->format('Y-m-d'),
+                        $billing->through ? $billing->through->format('Y-m-d') : '',
+                        $newThrough->format('Y-m-d'),
                     )
                 );
             }
