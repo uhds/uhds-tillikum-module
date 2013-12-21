@@ -67,28 +67,31 @@ class CancellationAudit extends AbstractReport
             $personIdToApplicationMap[$row['person_id']] = $row;
         }
 
-        $people = $this->tillikumEm->createQuery(
-            "
-            SELECT p,
-                   mp.name mp_name,
-                   fc.name fname, fgc.name fgname,
-                   b.end b_end,
-                   m.end m_end
-            FROM TillikumX\Entity\Person\Person p
-            LEFT JOIN p.bookings b WITH b.end >= :rangeStart
-            LEFT JOIN p.mealplans m WITH m.end >= :rangeStart
-            LEFT JOIN m.mealplan mp
-            LEFT JOIN b.facility f
-            LEFT JOIN f.configs fc WITH fc.start BETWEEN b.start AND b.end
-            LEFT JOIN f.facility_group fg
-            LEFT JOIN fg.configs fgc WITH fgc.start BETWEEN b.start AND b.end
-            WHERE p.id IN (:personIds)
-            GROUP BY p.id
-            "
-        )
-            ->setParameter('personIds', array_keys($personIdToApplicationMap))
-            ->setParameter('rangeStart', $rangeStart)
-            ->getResult();
+        $people = array();
+        if ($personIdToApplicationMap) {
+            $people = $this->tillikumEm->createQuery(
+                "
+                SELECT p,
+                    mp.name mp_name,
+                    fc.name fname, fgc.name fgname,
+                    b.end b_end,
+                    m.end m_end
+                FROM TillikumX\Entity\Person\Person p
+                LEFT JOIN p.bookings b WITH b.end >= :rangeStart
+                LEFT JOIN p.mealplans m WITH m.end >= :rangeStart
+                LEFT JOIN m.mealplan mp
+                LEFT JOIN b.facility f
+                LEFT JOIN f.configs fc WITH fc.start BETWEEN b.start AND b.end
+                LEFT JOIN f.facility_group fg
+                LEFT JOIN fg.configs fgc WITH fgc.start BETWEEN b.start AND b.end
+                WHERE p.id IN (:personIds)
+                GROUP BY p.id
+                "
+            )
+                ->setParameter('personIds', array_keys($personIdToApplicationMap))
+                ->setParameter('rangeStart', $rangeStart)
+                ->getResult();
+        }
 
         $ret = array(
             array(
