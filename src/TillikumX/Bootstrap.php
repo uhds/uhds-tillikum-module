@@ -55,10 +55,6 @@ class Bootstrap extends TillikumBootstrap
             )
         );
         $autoloader->register();
-
-        if (!function_exists('idx')) {
-            require $uhdsBasePath . '/../../utils.php';
-        }
     }
 
     public function _initUhdsEntityManager()
