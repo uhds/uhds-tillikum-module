@@ -16,6 +16,7 @@
     },
     "require": {
         "beberlei/DoctrineExtensions": "dev-master",
+        "brandonwamboldt/utilphp": "~1.0",
         "doctrine/orm": "~2.3",
         "guilhermeblanco/zendframework1-doctrine2": "dev-master",
         "gwis/php-valueobjects": "dev-master",
