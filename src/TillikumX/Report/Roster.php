@@ -11,6 +11,7 @@ namespace TillikumX\Report;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Query\ResultSetMapping;
 use Tillikum\Report\AbstractReport;
 
 class Roster extends AbstractReport
@@ -117,23 +118,28 @@ class Roster extends AbstractReport
 
         $applications = [];
         if (!empty($ids)) {
-            $result = $this->uhdsEm->createQuery(
+            $rsm = new ResultSetMapping();
+            $rsm->addScalarResult('person_id', 'person_id');
+            $rsm->addScalarResult('slug', 'slug');
+
+            $result = $this->uhdsEm->createNativeQuery(
                 '
-                SELECT a.personId person_id, t.effective, t.slug
-                FROM Uhds\Entity\HousingApplication\Application\Application a
-                JOIN a.template t
-                JOIN Uhds\Entity\HousingApplication\Application\Completion c WITH c.application = a
+                SELECT a.person_id, t1.slug
+                FROM housingapplication_application a
+                JOIN (
+                    SELECT t2.id, t2.slug, t2.effective
+                    FROM housingapplication_template AS t2
+                    ORDER BY t2.effective DESC
+                ) AS t1 ON a.template_id = t1.id
                 WHERE a.state NOT IN (:states) AND
-                    c.createdAt > :aYearAgo AND
-                    t.effective <= :date AND
-                    a.personId IN (:personIds)
-                GROUP BY a.personId
-                HAVING t.effective = MAX(t.effective)
-                '
+                      t1.effective <= :date AND
+                      a.person_id IN (:personIds)
+                GROUP BY a.person_id
+                ',
+                $rsm
             )
                 ->setParameter('states', ['canceled'])
-                ->setParameter('aYearAgo', new DateTime('-1 year'))
-                ->setParameter('date', $date)
+                ->setParameter('date', $date->format('Y-m-d'))
                 ->setParameter('personIds', $ids)
                 ->getResult();
 
