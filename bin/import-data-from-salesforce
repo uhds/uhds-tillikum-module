@@ -201,7 +201,7 @@ foreach ($rows as $row) {
 }
 
 if ($rShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('canceled INTO non-homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_CancelResidenceReservation')
         ->setBodyText($rBody)
@@ -209,7 +209,7 @@ if ($rShouldSendEmail) {
 }
 
 if ($hShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('canceled INTO homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_CancelHomestayReservation')
         ->setBodyText($hBody)
@@ -288,7 +288,7 @@ foreach ($rows as $row) {
 }
 
 if ($rShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('changed INTO non-homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_ChangeResidenceReservation')
         ->setBodyText($rBody)
@@ -296,7 +296,7 @@ if ($rShouldSendEmail) {
 }
 
 if ($hShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('changed INTO homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_ChangeHomestayReservation')
         ->setBodyText($hBody)
@@ -410,7 +410,7 @@ foreach ($rows as $row) {
 }
 
 if ($rShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('new INTO non-homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_ResidenceReserve')
         ->setBodyText($rBody)
@@ -418,7 +418,7 @@ if ($rShouldSendEmail) {
 }
 
 if ($hShouldSendEmail) {
-    id(new \Uhds_Mail())
+    (new \Uhds_Mail())
         ->setSubject('new INTO homestay reservation summary')
         ->addRecipientsFromDatabase('Reservation_Mail_HomestayReserve')
         ->setBodyText($hBody)
