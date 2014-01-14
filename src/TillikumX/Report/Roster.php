@@ -131,14 +131,14 @@ class Roster extends AbstractReport
                     FROM housingapplication_template AS t2
                     ORDER BY t2.effective DESC
                 ) AS t1 ON a.template_id = t1.id
-                WHERE a.state NOT IN (:states) AND
+                WHERE a.state IN (:states) AND
                       t1.effective <= :date AND
                       a.person_id IN (:personIds)
                 GROUP BY a.person_id
                 ',
                 $rsm
             )
-                ->setParameter('states', ['canceled'])
+                ->setParameter('states', ['processed'])
                 ->setParameter('date', $date->format('Y-m-d'))
                 ->setParameter('personIds', $ids)
                 ->getResult();
