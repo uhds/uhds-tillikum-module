@@ -171,9 +171,7 @@ return array(
                     'parameters' => array(
                         'array' => array(
                             'TillikumX\Booking\Into',
-                            'TillikumX\Booking\PendingSummer2013',
-                            'TillikumX\Booking\PendingFall2013New',
-                            'TillikumX\Booking\PendingFall2013Return',
+                            'TillikumX\Booking\PendingSpring2014',
                         ),
                     ),
                 ),
