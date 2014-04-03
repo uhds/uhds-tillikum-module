@@ -46,7 +46,8 @@ class RoomList extends AbstractReport
 
         $result = $this->em->createQuery(
             "
-            SELECT r.id, rc.name rname, rc.capacity, rc.gender, rc.floor, rc.section,
+            SELECT r.id, rc.name rname, rc.capacity, rc.gender, rc.floor,
+                   rc.section, rc.note,
                    CASE WHEN COUNT(tag_ra.id) > 0 THEN 'Y' ELSE 'N' END is_ra,
                    fgc.name fgname,
                    s.name sname,
@@ -80,6 +81,7 @@ class RoomList extends AbstractReport
                 'Section',
                 'Suite',
                 'RA room?',
+                'Notes',
             ]
         ];
 
@@ -94,6 +96,7 @@ class RoomList extends AbstractReport
                 $row['section'],
                 $row['sname'],
                 $row['is_ra'],
+                $row['note'],
             ];
         }
 
