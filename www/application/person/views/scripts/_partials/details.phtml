@@ -103,6 +103,14 @@
       <dt>Hours registered</dt>
       <dd><?php echo $this->person->hours_registered; ?></dd>
     <?php endif; ?>
+
+    <?php if (!empty($this->person->start_session)): ?>
+      <dt>START session</dt>
+      <dd><?= $this->escape($this->person->start_session) ?></dd>
+    <?php endif; ?>
+
+      <dt>International?</dt>
+      <dd><?= $this->person->is_international ? 'Yes' : 'No' ?></dd>
     </dl>
   </div>
 </div>

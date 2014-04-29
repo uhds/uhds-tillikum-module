@@ -127,6 +127,16 @@ class Person extends TillikumPerson
     protected $can_sms = false;
 
     /**
+     * @ORM\Column(type="boolean")
+     */
+    protected $is_international = false;
+
+    /**
+     * @ORM\Column(nullable=true)
+     */
+    protected $start_session;
+
+    /**
      * INTO Salesforce information cache
      *
      * @var array

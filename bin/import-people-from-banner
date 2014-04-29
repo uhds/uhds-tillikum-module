@@ -58,6 +58,8 @@ foreach ($bannerRows as $bannerRow) {
     $person->primary_major_2 = $bannerRow['primary_major_2'];
     $person->primary_minor_1 = $bannerRow['primary_minor_1'];
     $person->hours_registered = $bannerRow['hours_registered'];
+    $person->start_session = $bannerRow['start_session'];
+    $person->is_international = $bannerRow['international_flag'];
 
     $directoryType = $entityManager->find(
         'Tillikum\Entity\Person\Address\Type',
