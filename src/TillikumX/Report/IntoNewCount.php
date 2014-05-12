@@ -85,9 +85,10 @@ class IntoNewCount extends AbstractReport
         }
 
         $body[3] = $body[1] + $body[2];
-        $body[4] = round($body[1] / $body[3] * 100) . '%';
-        $body[5] = round($body[2] / $body[3] * 100) . '%';
-
+        if ($body[3] > 0 ) {
+            $body[4] = round($body[1] / $body[3] * 100) . '%';
+            $body[5] = round($body[2] / $body[3] * 100) . '%';
+        }
         $ret[] = $body;
 
         return $ret;
