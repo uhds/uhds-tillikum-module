@@ -59,6 +59,9 @@ class Roster extends AbstractReport
                    ec1.given_name ec_given_name, ec1.family_name ec_family_name,
                    ec1.relationship ec_relationship,
                    ec1.primary_phone_number ec_primary_phone_number,
+                   ec2.given_name ec2_given_name, ec2.family_name ec2_family_name,
+                   ec2.relationship ec2_relationship,
+                   ec2.primary_phone_number ec2_primary_phone_number,
                    m.name mname
             FROM TillikumX\Entity\Person\Person p
             JOIN p.bookings b WITH :date BETWEEN b.start AND b.end
@@ -72,7 +75,8 @@ class Roster extends AbstractReport
             LEFT JOIN p.addresses campus_address WITH campus_address.type = 'campus'
             LEFT JOIN p.emails directory_email WITH directory_email.type = 'directory'
             LEFT JOIN p.phone_numbers user_phone_number WITH user_phone_number.type = 'user'
-            LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1'
+            LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1' 
+            LEFT JOIN p.emergency_contacts ec2 WITH ec2.type = 'ec2'
             LEFT JOIN p.tags t
             WHERE fg.id IN (:facilityGroupIds)
             ORDER BY fgcname, rcname
@@ -168,10 +172,14 @@ class Roster extends AbstractReport
                 'Primary phone',
                 'Directory email',
                 'Medical information',
-                'Primary emergency contact first name',
-                'Primary emergency contact last name',
-                'Primary emergency contact relationship',
-                'Primary emergency contact phone',
+                'Missing person contact first name',
+                'Missing person contact last name',
+                'Missing person contact relationship',
+                'Missing person contact phone',
+                'Emergency contact first name',
+                'Emergency contact last name',
+                'Emergency contact relationship',
+                'Emergency contact phone',
                 'Application type',
                 'Room type',
                 'Campus address',
@@ -217,6 +225,10 @@ class Roster extends AbstractReport
                 $row['ec_family_name'],
                 $row['ec_relationship'],
                 $row['ec_primary_phone_number'],
+                $row['ec2_given_name'],
+                $row['ec2_family_name'],
+                $row['ec2_relationship'],
+                $row['ec2_primary_phone_number'],
                 $application ? implode(', ', $application) : '',
                 $row['roomtype'],
                 preg_replace('/\n|\r|\r\n/', ', ', $row['campus_address_street']),
@@ -232,3 +244,4 @@ class Roster extends AbstractReport
         return $ret;
     }
 }
+
