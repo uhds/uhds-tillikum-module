@@ -4,10 +4,10 @@
 
 A high level overview follows:
 
-- Create the new pending booking plugin class
-- Create an action helper to fetch and manipulate the data
-- Create a view helper to customize rendering of the data (if necessary)
-- Update the local configuration to point to the class you created in the first step
+1. Create the new pending booking plugin class
+2. Create an action helper to fetch and manipulate the data
+3. Create a view helper to customize rendering of the data (if necessary)
+4. Update the local configuration to point to the class you created in the first step
 
 ### Creating the pending booking plugin class
 
