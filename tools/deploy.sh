@@ -3,14 +3,13 @@
 DIR="$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)"
 
 function usage() {
-  echo "Usage: ${0} <hostname>" >&2
+  echo "Usage: ${0} <hostname>"
 }
 
 if [ -z "$1" ]
 then
-  echo "You need to supply <hostname>."
-  echo
-  usage
+  echo -e "You need to supply <hostname>.\n" >&2
+  usage >&2
 
   exit 1
 fi
