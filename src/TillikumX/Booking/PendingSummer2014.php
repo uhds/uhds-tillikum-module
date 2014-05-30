@@ -50,6 +50,6 @@ class PendingSummer2014 extends AbstractPendingBooking
      */
     public function getViewHelperName()
     {
-        return 'DataTablePendingSummer2014';
+        return 'DataTablePendingSummerHousingApplication';
     }
 }
