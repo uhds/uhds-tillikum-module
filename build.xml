@@ -20,6 +20,7 @@
       <arg value="--delete-delay" />
       <arg line="--rsync-path='sudo rsync'" />
       <arg line="--exclude config/*local.config.php" />
+      <arg line="--exclude site/oregonstate.edu/vendor/" />
       <arg line="--exclude .git/" />
       <arg line="--exclude .svn/" />
     </exec>
