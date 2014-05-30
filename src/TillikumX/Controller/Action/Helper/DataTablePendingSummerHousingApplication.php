@@ -8,35 +8,37 @@ use Zend_Controller_Action_Helper_Abstract as AbstractHelper;
 
 abstract class DataTablePendingSummerHousingApplication extends AbstractHelper
 {
-    public abstract function fetchApplications();
+    abstract public function fetchApplications();
 
-    public abstract function getBookingData($application);
+    abstract public function getBookingData($application);
 
-    public abstract function getMealplanData($application);
+    abstract public function getMealplanData($application);
 
-    public abstract function getLastSpringBookingDate();
+    abstract public function getLastSpringBookingDate();
 
-    public abstract function getFirstFallBookingDate();
+    abstract public function getFirstFallBookingDate();
 
-    public abstract function getBookingStartDate();
+    abstract public function getBookingStartDate();
 
-    public abstract function getBookingEndDate();
+    abstract public function getBookingEndDate();
 
     public function dataTablePendingSummerHousingApplication()
     {
         $ac = $this->_actionController;
         $view = $ac->view;
 
-        $em = $ac->getEntityManager();
+        $sm = $ac->getServiceManager();
+        $tillikumEm = $sm->get('doctrine.entitymanager.orm_default');
+        $uhdsEm = $sm->get('doctrine.entitymanager.orm_uhds');
 
-        $peopleBookedById = array();
+        $peopleBookedById = [];
 
         $bookingRange = new DateRange(
             $this->getBookingStartDate(),
             $this->getBookingEndDate()
         );
 
-        $bookedPeople = $em->createQuery(
+        $bookedPeople = $tillikumEm->createQuery(
             "
             SELECT p.id
             FROM Tillikum\Entity\Person\Person p
@@ -48,14 +50,12 @@ abstract class DataTablePendingSummerHousingApplication extends AbstractHelper
             ->setParameter('end', $bookingRange->getEnd())
             ->getResult();
 
-        $bookedPersonHash = array();
+        $bookedPersonHash = [];
         foreach ($bookedPeople as $bookedPerson) {
             $bookedPersonHash[$bookedPerson['id']] = true;
         }
 
-        $rmnGateway = new \Uhds\Model\HousingApplication\RmnGateway();
-
-        $facilityGroups = $em->createQuery(
+        $facilityGroups = $tillikumEm->createQuery(
             "
             SELECT fg.id, fgc.name
             FROM Tillikum\Entity\FacilityGroup\FacilityGroup fg
@@ -66,102 +66,81 @@ abstract class DataTablePendingSummerHousingApplication extends AbstractHelper
             ->setParameter('now', new DateTime())
             ->getResult();
 
-        $facilityGroupNamesByIds = array();
+        $facilityGroupNamesByIds = [];
         foreach ($facilityGroups as $facilityGroup) {
             $facilityGroupNamesByIds[$facilityGroup['id']] = $facilityGroup['name'];
         }
 
         $applications = $this->fetchApplications();
 
-        $personIds = array();
+        $personIds = [];
         foreach ($applications as $application) {
-            $personIds[] = $application->person_id;
+            $personIds[] = $application->getPersonId();
         }
 
+        $people = [];
         if (count($personIds) > 0) {
-            $people = $em->createQuery(
-                "
+            $people = $tillikumEm->createQuery(
+                '
                 SELECT partial p.{id, birthdate, gender, family_name, given_name, middle_name, display_name, osuid}
                 FROM TillikumX\Entity\Person\Person p
                 WHERE p.id IN (:personIds)
-                "
+                '
             )
                 ->setParameter('personIds', $personIds)
                 ->getResult();
-        } else {
-            $people = array();
         }
 
-        $ret = array();
+        $ret = [];
         foreach ($applications as $application) {
-            if (array_key_exists($application->person_id, $bookedPersonHash)) {
+            if (array_key_exists($application->getPersonId(), $bookedPersonHash)) {
                 continue;
             }
 
-            $personalProfile = $application->personalprofile;
-            $prefs = $application->building;
+            $buildingPreferences = $application->getSection('Building')->getPreferences();
 
-            $prefArray = array();
-            for ($i = 1; $i <= 5; $i++) {
-                $buildingIdPref = "preference_$i" . '_building_id';
-                $roomtypePref = "preference_$i" . '_roomtype';
-                $optionsPref = "preference_$i" . '_options';
+            $prefArray = [];
+            foreach ($buildingPreferences as $pref) {
+                $options = $pref->getOptions();
 
-                if (empty($prefs->$buildingIdPref)) {
-                    continue;
+                $opts = [];
+                foreach ($options as $option) {
+                    $opts[] = $option->getCode();
                 }
 
                 $prefArray[] = $view->escape(
                     sprintf(
-                        '%s: %s (%s)',
-                        $i,
-                        $facilityGroupNamesByIds[$prefs->$buildingIdPref],
-                        $prefs->$roomtypePref . (isset($prefs->$optionsPref) ? '; ' . implode(', ', (array) $prefs->$optionsPref) : '')
+                        '%s: %s %s%s',
+                        $pref->getNumber(),
+                        $facilityGroupNamesByIds[$pref->getBuildingId()],
+                        $pref->getType(),
+                        $opts ? ' (' . implode(', ', $opts) . ')' : ''
                     )
                 );
             }
+            natsort($prefArray);
             $prefString = implode("\n", $prefArray);
 
-            $roommateIds = $rmnGateway->fetchMutualConfirmedIds($application->id);
-            $roommateArray = array();
-            foreach ($roommateIds as $roommateId) {
-                list($roommatePersonId, $templateId) = explode('-', $roommateId, 2);
-                $roommateArray[] = array(
-                    'text' => $roommatePersonId,
-                    'uri' => $ac->getHelper('Url')->direct(
-                        'view',
-                        'person',
-                        'person',
-                        array(
-                            'id' => $roommatePersonId,
-                        )
-                    )
-                );
-            }
-
-            $ynString = '';
-            foreach ($application->roommateprofile->toArray() as $k => $v) {
-                if (substr($k, 0, 3) === 'yn_') {
-                    $ynString .= $v;
-                }
-            }
+            $questionnaire = $application->getSection('Questionnaire');
 
             $facilityBookingQueryString = http_build_query(
-                array(
+                [
                     'json' => json_encode($this->getBookingData($application))
-                )
+                ]
             );
 
             $mealplanBookingQueryString = http_build_query(
-                array(
+                [
                     'json' => json_encode($this->getMealplanData($application))
-                )
+                ]
             );
 
-            $person = $em->find(
+            $person = $tillikumEm->find(
                 'TillikumX\Entity\Person\Person',
-                $application->person_id
+                $application->getPersonId()
             );
+
+            $diningSection = $application->getSection('Dining');
 
             $springBooking = $person->bookings->filter(
                 \Tillikum\Common\Booking\Bookings::createIncludedDateFilter(
@@ -177,46 +156,47 @@ abstract class DataTablePendingSummerHousingApplication extends AbstractHelper
             )
                 ->first();
 
-            $attendanceStart = empty($application->attendance->start) ? null : new DateTime($application->attendance->start);
-            $attendanceEnd = empty($application->attendance->end) ? null : new DateTime($application->attendance->end);
+            $attendanceSection = $application->getSection('Attendance');
 
-            $ret[] = array(
+            $attendanceStart = empty($attendanceSection) ? null : new DateTime($attendanceSection->getStart());
+            $attendanceEnd = empty($attendanceSection) ? null : new DateTime($attendanceSection->getEnd());
+
+            $ret[] = [
                 'person_uri' => $ac->getHelper('Url')->direct(
                     'view',
                     'person',
                     'person',
-                    array(
-                        'id' => $application->person_id
-                    )
+                    [
+                        'id' => $person ? $person->id : '',
+                    ]
                 ),
                 'name' => $person ? $person->display_name : '',
                 'osuid' => $person ? $person->osuid : '',
-                'age' => $person ? date_diff($person->birthdate, new DateTime(date('Y-m-d')))->y : '',
+                'age' => $person ? $person->getAge(new DateTime(date('Y-m-d'))) : '',
+                'gender' => $person ? $person->gender : '',
                 'spring_assignment' => $springBooking ? implode(' ', $springBooking->facility->getNamesOnDate($this->getLastSpringBookingDate())) : '',
                 'fall_assignment' => $fallBooking ? implode(' ', $fallBooking->facility->getNamesOnDate($this->getFirstFallBookingDate())) : '',
                 'attendance_start' => $attendanceStart,
                 'attendance_end' => $attendanceEnd,
-                'gender' => $person ? $person->gender : '',
                 'preferences' => $prefString,
-                'profile' => $ynString,
-                'application_completed_at' => $application->completed_at,
+                'application_completed_at' => $application->getLatestCompletedAt(),
                 'facility_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
                     'create',
                     'booking',
-                    array(
+                    [
                         'pid' => $person ? $person->id : '',
-                    )
+                    ]
                 ) . '?' . $view->escape($facilityBookingQueryString),
                 'mealplan_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
                     'create',
                     'mealplan',
-                    array(
+                    [
                         'pid' => $person ? $person->id : '',
-                    )
+                    ]
                 ) . '?' . $view->escape($mealplanBookingQueryString),
-            );
+            ];
         }
 
         return $ret;
