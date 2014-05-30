@@ -7,7 +7,6 @@
       <th>Age</th>
       <th>Gender</th>
       <th>Building preferences</th>
-      <th>Profile answers</th>
       <th>Spring assignment</th>
       <th>Fall assignment</th>
       <th>Attendance start</th>
@@ -25,7 +24,6 @@
       <td><?php echo $this->escape($row['age']) ?></td>
       <td><?php echo $this->escape($row['gender']) ?></td>
       <td><?php echo nl2br($this->escape($row['preferences'])) ?></td>
-      <td><?php echo $this->escape($row['profile']) ?></td>
       <td><?php echo $this->escape($row['spring_assignment']) ?></td>
       <td><?php echo $this->escape($row['fall_assignment']) ?></td>
       <td><?php echo $this->markupDate($row['attendance_start']) ?></td>
