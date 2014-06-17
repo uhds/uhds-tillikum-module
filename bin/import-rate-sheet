@@ -1,0 +1,77 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+try {
+    $getopt = new Console\Getopt(
+        array(
+            'd' => 'Debug mode (make no changes, just read in the file)',
+        )
+    );
+} catch (Console\Exception\ExceptionInterface $e) {
+    fprintf(STDERR, $e->getUsageMessage());
+
+    exit(1);
+}
+
+$filenames = $getopt->getRemainingArgs();
+
+if (count($filenames) !== 1) {
+    fprintf(STDERR, $getopt->getUsageMessage());
+
+    exit(1);
+}
+
+$filename = $filenames[0];
+
+$isDebug = (bool) $getopt->getOption('d');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
+
+$facilityFp = fopen($filename, 'rb');
+
+if (!$facilityFp) {
+    exit(1);
+}
+
+while (($row = fgetcsv($facilityFp)) !== false) {
+    $rule = $entityManager->find('Tillikum\Entity\Billing\Rule\FacilityBooking', $row[0]);
+
+    if (!$rule) {
+        echo "No rule {$row[0]} found.\n";
+
+        continue;
+    }
+
+    $entity = new \Tillikum\Entity\Billing\Rule\Config\FacilityBooking();
+    $entity->rule = $rule;
+    $entity->strategy = $row[2];
+    $entity->code = $row[3];
+    $entity->description = $row[4];
+    $entity->start = new DateTime($row[5]);
+    $entity->end = new DateTime($row[6]);
+    $entity->currency = 'USD';
+    $entity->amount = $row[7];
+    $entity->created_by = '_system';
+    $entity->updated_by = '_system';
+
+    $entityManager->persist($entity);
+}
+
+if ($isDebug) {
+    echo "Debug mode on; not flushing any changes.\n";
+} else {
+    $entityManager->flush();
+}
