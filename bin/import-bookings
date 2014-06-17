@@ -1,0 +1,158 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+try {
+    $getopt = new Console\Getopt(
+        array(
+            'd' => 'Debug mode (make no changes, just read in the file)',
+        )
+    );
+} catch (Console\Exception\ExceptionInterface $e) {
+    fprintf(STDERR, $e->getUsageMessage());
+
+    exit(1);
+}
+
+$filenames = $getopt->getRemainingArgs();
+
+if (count($filenames) !== 1) {
+    fprintf(STDERR, $getopt->getUsageMessage());
+
+    exit(1);
+}
+
+$filename = $filenames[0];
+
+$isDebug = (bool) $getopt->getOption('d');
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
+
+$facilityFp = fopen($filename, 'rb');
+if (!$facilityFp) {
+    exit;
+}
+
+while (($row = fgetcsv($facilityFp)) !== false) {
+    $person = $entityManager->find('TillikumX\Entity\Person\Person', $row[0]);
+
+    if (!$person) {
+        echo "No person \"{$row[0]}\" found.\n";
+
+        continue;
+    }
+
+    $facility = $entityManager->find('Tillikum\Entity\Facility\Facility', $row[3]);
+
+    if (!$facility) {
+        echo "No facility \"{$row[3]}\" found.\n";
+
+        continue;
+    }
+
+    $bookingRule = $entityManager->find('Tillikum\Entity\Billing\Rule\Rule', $row[8]);
+
+    if (!$bookingRule) {
+        echo "No facility rule \"{$row[8]}\" found.\n";
+
+        continue;
+    }
+
+    $rate = new \Tillikum\Entity\Booking\Facility\Billing\Rate\Rate();
+    $rate->rule = $bookingRule;
+    $rate->start = new DateTime($row[10]);
+    $rate->end = new DateTime($row[11]);
+    $rate->created_by = '_system';
+    $rate->updated_by = '_system';
+
+    $billing = new \Tillikum\Entity\Booking\Facility\Billing\Billing();
+    $billing->created_by = '_system';
+    $billing->updated_by = '_system';
+
+    $billing->rates->add($rate);
+    $rate->billing = $billing;
+
+    $facilityBooking = new \Tillikum\Entity\Booking\Facility\Facility;
+    $facilityBooking->person = $person;
+    $facilityBooking->facility = $facility;
+    $facilityBooking->start = new DateTime($row[6]);
+    $facilityBooking->end = new DateTime($row[7]);
+    $facilityBooking->note = '';
+    $facilityBooking->created_by = '_system';
+    $facilityBooking->updated_by = '_system';
+
+    $billing->booking = $facilityBooking;
+    $facilityBooking->billing = $billing;
+
+    $entityManager->persist($rate);
+    $entityManager->persist($billing);
+    $entityManager->persist($facilityBooking);
+
+    if (!empty($row[12])) {
+        $mealplanRule = $entityManager->find('Tillikum\Entity\Billing\Rule\Rule', $row[16]);
+
+        if (!$mealplanRule) {
+            echo "No meal plan rule \"{$row[16]}\" found.\n";
+
+            continue;
+        }
+
+        $rate = new \Tillikum\Entity\Booking\Mealplan\Billing\Rate\Rate();
+        $rate->rule = $mealplanRule;
+        $rate->start = new DateTime($row[18]);
+        $rate->end = new DateTime($row[19]);
+        $rate->created_by = '_system';
+        $rate->updated_by = '_system';
+
+        $billing = new \Tillikum\Entity\Booking\Mealplan\Billing\Billing();
+        $billing->created_by = '_system';
+        $billing->updated_by = '_system';
+
+        $billing->rates->add($rate);
+        $rate->billing = $billing;
+
+        $mealplan = $entityManager->find('Tillikum\Entity\Mealplan\Mealplan', $row[12]);
+
+        if (!$mealplan) {
+            echo "No meal plan \"{$row[12]}\" found.\n";
+
+            continue;
+        }
+
+        $mealplanBooking = new \Tillikum\Entity\Booking\Mealplan\Mealplan;
+        $mealplanBooking->person = $person;
+        $mealplanBooking->mealplan = $mealplan;
+        $mealplanBooking->start = new DateTime($row[14]);
+        $mealplanBooking->end = new DateTime($row[15]);
+        $mealplanBooking->note = '';
+        $mealplanBooking->created_by = '_system';
+        $mealplanBooking->updated_by = '_system';
+
+        $billing->booking = $mealplanBooking;
+        $mealplanBooking->billing = $billing;
+
+        $entityManager->persist($rate);
+        $entityManager->persist($billing);
+        $entityManager->persist($mealplanBooking);
+    }
+}
+
+if ($isDebug) {
+    echo "Debug mode on; not saving any changes.\n";
+} else {
+    echo "Saving...";
+    $entityManager->flush();
+    echo " done!\n";
+}
