@@ -4,6 +4,8 @@ namespace TillikumX\Controller\Action\Helper;
 
 use DateTime;
 use Vo\DateRange;
+use Doctrine\Common\Collections\ArrayCollection;
+use Tillikum\Common\Contract\Signatures;
 use Zend_Controller_Action_Helper_Abstract as AbstractHelper;
 
 abstract class DataTablePendingHousingApplication extends AbstractHelper
@@ -138,6 +140,27 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
 
             // @todo implement this
             $roommatePersonIds = [];
+            $rmn = $uhdsEm->createQuery(
+                    "
+                    SELECT r
+                    FROM Uhds\Entity\HousingApplication\Rmn\Relationship r
+                    WHERE (r.requestee = (:applicationId) OR r.requestor = (:applicationId))
+                    AND r.confirmedBy IS NOT NULL
+                    AND r.removedBy IS NULL
+                    "
+                )
+                ->setParameter('applicationId', $application->getId())
+                ->getResult();
+
+            if (!empty($rmn)) {
+                foreach ($rmn as $row) {
+                    if ($row->getRequestee()->getId() === $application->getId()) {
+                        $roommatePersonIds[] = $row->getRequestor()->getPersonId();
+                    } else {
+                        $roommatePersonIds[] = $row->getRequestee()->getPersonId();
+                    }
+                }
+            }
 
             $roommateRowData = [];
             if (count($roommatePersonIds) > 0) {
@@ -183,6 +206,26 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
                 $application->getPersonId()
             );
 
+            $contract = $tillikumEm->find(
+                'Tillikum\Entity\Contract\Contract',
+                '20142015rd'
+            );
+
+            $signatures = $tillikumEm->getRepository('Tillikum\Entity\Contract\Signature')
+                ->findBy(
+                    [
+                        'contract' => $contract,
+                        'person' => $person,
+                    ]
+                );
+
+            $signatures = new ArrayCollection($signatures);
+            $activeSignatures = $signatures->filter(
+                Signatures::createIsActiveFilter()
+            );
+
+            $hasSignedContract = count($activeSignatures) > 0;
+
             $diningSection = $application->getSection('Dining');
 
             $ret[] = [
@@ -201,8 +244,9 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
                 'dining_plan' => $diningSection ? $diningSection->getPlanId() : '',
                 'preferences' => $prefString,
                 'profile' => $ynString,
-                'roommates' => $roommatePersonIds,
+                'roommates' => $roommateRowData,
                 'application_completed_at' => $application->getLatestCompletedAt(),
+                'contract_signed' => $hasSignedContract ? 'Y' : 'N',
                 'facility_booking_uri' => $ac->getHelper('Url')->direct(
                     'index',
                     'create',
