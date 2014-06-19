@@ -95,30 +95,32 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
                 continue;
             }
 
-            $buildingPreferences = $application->getSection('Building')->getPreferences();
+            $prefString = null;
+            if (!strstr($application->getTemplate()->getSlug(), 'return')) {
+                $buildingPreferences = $application->getSection('Building')->getPreferences();
 
-            $prefArray = [];
-            foreach ($buildingPreferences as $pref) {
-                $options = $pref->getOptions();
+                $prefArray = [];
+                foreach ($buildingPreferences as $pref) {
+                    $options = $pref->getOptions();
 
-                $opts = [];
-                foreach ($options as $option) {
-                    $opts[] = $option->getCode();
+                    $opts = [];
+                    foreach ($options as $option) {
+                        $opts[] = $option->getCode();
+                    }
+
+                    $prefArray[] = $view->escape(
+                        sprintf(
+                            '%s: %s %s%s',
+                            $pref->getNumber(),
+                            $facilityGroupNamesByIds[$pref->getBuildingId()],
+                            $pref->getType(),
+                            $opts ? ' (' . implode(', ', $opts) . ')' : ''
+                        )
+                    );
                 }
-
-                $prefArray[] = $view->escape(
-                    sprintf(
-                        '%s: %s %s%s',
-                        $pref->getNumber(),
-                        $facilityGroupNamesByIds[$pref->getBuildingId()],
-                        $pref->getType(),
-                        $opts ? ' (' . implode(', ', $opts) . ')' : ''
-                    )
-                );
+                natsort($prefArray);
+                $prefString = implode("\n", $prefArray);
             }
-            natsort($prefArray);
-            $prefString = implode("\n", $prefArray);
-
             $questionnaire = $application->getSection('Questionnaire');
             $ynArray = [];
 
@@ -242,7 +244,7 @@ abstract class DataTablePendingHousingApplication extends AbstractHelper
                 'age' => $person ? $person->getAge(new DateTime(date('Y-m-d'))) : '',
                 'gender' => $person ? $person->gender : '',
                 'dining_plan' => $diningSection ? $diningSection->getPlanId() : '',
-                'preferences' => $prefString,
+                'preferences' => $prefString ? $prefString : '',
                 'profile' => $ynString,
                 'roommates' => $roommateRowData,
                 'application_completed_at' => $application->getLatestCompletedAt(),
