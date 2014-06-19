@@ -40,7 +40,7 @@ class PendingFall2014 extends AbstractPendingBooking
      */
     public function getName()
     {
-        return 'Fall 2014';
+        return 'Fall (New) 2014';
     }
 
     /**
