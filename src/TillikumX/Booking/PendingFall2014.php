@@ -30,7 +30,7 @@ class PendingFall2014 extends AbstractPendingBooking
      */
     public function getDescription()
     {
-        return 'All bookings pending for the winter 2014 housing application.';
+        return 'All bookings pending for the fall 2014 housing application.';
     }
 
     /**
