@@ -16,6 +16,19 @@ use Tillikum\Report\AbstractReport;
 
 class Roster extends AbstractReport
 {
+    /**
+     * How far into the future to advance the queried template effective date?
+     *
+     * Should be an argument that can be passed directory to DateTime#modify.
+     *
+     * Because we pull templates from the selected date on back, if a user selects a
+     * date just before the template effective date, applications won't show up in
+     * rosters.
+     *
+     * @var string
+     */
+    const EFFECTIVE_DATE_SLOP = '+2 weeks';
+
     private $tillikumEm;
     private $uhdsEm;
 
@@ -143,7 +156,12 @@ class Roster extends AbstractReport
                 $rsm
             )
                 ->setParameter('states', ['processed'])
-                ->setParameter('date', $date->format('Y-m-d'))
+                ->setParameter(
+                    'date',
+                    (new DateTime($date->format('U')))
+                        ->modify(self::EFFECTIVE_DATE_SLOP)
+                        ->format('Y-m-d')
+                )
                 ->setParameter('personIds', $ids)
                 ->getResult();
 
