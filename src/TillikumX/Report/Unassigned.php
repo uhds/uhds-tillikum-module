@@ -10,8 +10,10 @@
 namespace TillikumX\Report;
 
 use DateTime;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManager;
 use PDO;
+use Tillikum\Common\Contract\Signatures;
 use Tillikum\Report\AbstractReport;
 
 class Unassigned extends AbstractReport
@@ -46,6 +48,7 @@ class Unassigned extends AbstractReport
 
         $templateIds = $parameters['applications'];
         $date = new DateTime($parameters['date']);
+        $contractId = $parameters['contract'];
 
         $applicationResult = $this->uhdsEm->createQuery(
             '
@@ -79,6 +82,7 @@ class Unassigned extends AbstractReport
                 'Last name',
                 'First name',
                 'Gender',
+                'Has valid contract?',
                 'Tags',
             )
         );
@@ -89,8 +93,9 @@ class Unassigned extends AbstractReport
 
         $people = $this->tillikumEm->createQuery(
             '
-            SELECT PARTIAL p.{id, family_name, given_name, gender, osuid}, tags
+            SELECT PARTIAL p.{id, family_name, given_name, gender, osuid}, sigs, tags
             FROM TillikumX\Entity\Person\Person p
+            LEFT JOIN p.contract_signatures sigs WITH sigs.contract = :contractId
             LEFT JOIN p.bookings b WITH :date BETWEEN b.start AND b.end
             LEFT JOIN p.tags tags
             WHERE b IS NULL
@@ -98,10 +103,17 @@ class Unassigned extends AbstractReport
             '
         )
             ->setParameter('date', $date)
+            ->setParameter('contractId', $contractId)
             ->setParameter('personIds', array_keys($personIds))
             ->getResult();
 
         foreach ($people as $person) {
+            $isSignatureValid = Signatures::areValid(
+                new ArrayCollection(
+                    $person->contract_signatures->toArray()
+                )
+            );
+
             $ret[] = array(
                 $person->osuid,
                 $personIds[$person->id]['template_id'],
@@ -109,6 +121,7 @@ class Unassigned extends AbstractReport
                 $person->family_name,
                 $person->given_name,
                 $person->gender,
+                $isSignatureValid ? 'Yes' : 'No',
                 implode(
                     ', ',
                     array_map(

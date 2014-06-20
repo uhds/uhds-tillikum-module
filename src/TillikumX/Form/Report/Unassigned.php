@@ -12,10 +12,12 @@ namespace TillikumX\Form\Report;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 use Tillikum\Form\Report\Report as ReportForm;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Unassigned extends ReportForm
+class Unassigned extends ReportForm implements EntityManagerAwareInterface
 {
     private $uhdsEm;
+    private $tillikumEm;
 
     public function __construct(EntityManager $uhdsEm)
     {
@@ -56,6 +58,15 @@ class Unassigned extends ReportForm
             )
         );
 
+        $contract = new \Zend_Form_Element_Select(
+            'contract',
+            array(
+                'label' => 'Which contract would you like to use in this report?',
+                'multiOptions' => [],
+                'required' => true,
+            )
+        );
+
         $date = new \Tillikum_Form_Element_Date(
             'date',
             array(
@@ -67,8 +78,35 @@ class Unassigned extends ReportForm
         $this->addElements(
             array(
                 $applications,
+                $contract,
                 $date,
             )
         );
+    }
+
+    public function setEntityManager(EntityManager $em)
+    {
+        $this->tillikumEm = $em;
+
+        $contracts = $this->tillikumEm->createQuery(
+            "
+            SELECT c.id, c.name
+            FROM Tillikum\Entity\Contract\Contract c
+            WHERE c.end >= :date
+            ORDER BY c.name
+            "
+        )
+            ->setParameter('date', new DateTime('-1 year'))
+            ->getResult();
+
+        $contractOptions = array();
+        foreach ($contracts as $contract) {
+            $contractOptions[$contract['id']] = $contract['name'];
+        }
+
+        $this->contract->setMultiOptions($contractOptions);
+        $this->contract->setAttrib('size', count($contractOptions));
+
+        return $this;
     }
 }
