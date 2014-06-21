@@ -158,7 +158,7 @@ class Roster extends AbstractReport
                 ->setParameter('states', ['processed'])
                 ->setParameter(
                     'date',
-                    (new DateTime($date->format('U')))
+                    (new DateTime('@' . $date->format('U')))
                         ->modify(self::EFFECTIVE_DATE_SLOP)
                         ->format('Y-m-d')
                 )
