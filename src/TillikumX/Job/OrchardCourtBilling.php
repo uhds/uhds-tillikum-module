@@ -90,6 +90,7 @@ class OrchardCourtBilling extends AbstractJob
 
                 $rateCount += 1;
 
+                $oldBilledThrough = null;
                 if ($billing->through) {
                     $creditEvent = new Entity\Billing\Event\FacilityBooking();
                     $creditEvent->person = $booking->person;
@@ -99,6 +100,8 @@ class OrchardCourtBilling extends AbstractJob
                     $creditEvent->is_credit = true;
                     $creditEvent->start = $rate->start;
                     $creditEvent->end = min($rate->end, $billing->through);
+
+                    $oldBilledThrough = clone $creditEvent->end;
 
                     $billingEvents->add($creditEvent);
 
@@ -132,7 +135,7 @@ class OrchardCourtBilling extends AbstractJob
                         $rate->start->format('Y-m-d'),
                         $rate->end->format('Y-m-d'),
                         $billing->id,
-                        $billing->through ? $creditEvent->end->format('Y-m-d') : '',
+                        isset($oldBilledThrough) ? $oldBilledThrough->format('Y-m-d') : '',
                         $chargeEvent->end->format('Y-m-d'),
                     )
                 );
