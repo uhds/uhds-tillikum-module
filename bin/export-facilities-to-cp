@@ -31,6 +31,7 @@ $tillikumIdsToCpCodes = array(
     'c205f5bf5ed04b411313a0d0c243c446' => 'MCN',
     '39062811d089716e0b0df90d22b20553' => 'POL',
     '81d77d5899076aa84bbde9bd89db3667' => 'SAC',
+    '9d76fedefcbf4bd4a9ec6dd8bf85882a' => 'TEB',
     'd44573fea24db378d02efa71c9b1c33e' => 'WST', // Not a typo
     '9cf5b6b133d681eecff90e465cb3707a' => 'WIL',
     '91899c02ee2a7ea1c1af3cd5c2f4fed5' => 'WTH',
