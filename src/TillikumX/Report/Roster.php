@@ -236,7 +236,7 @@ class Roster extends AbstractReport
                 $person->primary_major_1,
                 $person->hours_registered,
                 $tags,
-                $row['phone_number'],
+                preg_replace('/[^0-9]/', '', $row['phone_number']),
                 $row['directory_email_value'],
                 preg_replace('/\s+/m', ' ', (string) $person->medical),
                 $row['ec_given_name'],
