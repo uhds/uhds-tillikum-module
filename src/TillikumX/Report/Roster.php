@@ -181,6 +181,7 @@ class Roster extends AbstractReport
                 'Gender',
                 'Birthdate',
                 'Age (as of ' . date('n/j/Y') . ')',
+                'Relation of',
                 'Ethnicity Code',
                 'Country of Origin',
                 'Student Type Code',
@@ -230,6 +231,7 @@ class Roster extends AbstractReport
                 $person->gender,
                 $person->birthdate ? $person->birthdate->format('Y-m-d') : '',
                 $person->age,
+                '',
                 $person->ethnicity_code,
                 $person->origin_country,
                 $person->student_type_code,
@@ -257,6 +259,47 @@ class Roster extends AbstractReport
             );
 
             $ret[] = $row;
+
+            foreach ($person->relations as $relation) {
+
+                $ret[] = [
+                    $row[0],
+                    $row[1],
+                    '',
+                    '',
+                    $relation->tail->family_name,
+                    $relation->tail->given_name,
+                    $relation->tail->gender,
+                    $relation->tail->birthdate ? $relation->tail->birthdate->format('Y-m-d') : '',
+                    $relation->tail->age,
+                    sprintf('%s (%s)', $person->display_name, $relation->type->name),
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    ''
+                ];
+            }
+
         }
 
         return $ret;
