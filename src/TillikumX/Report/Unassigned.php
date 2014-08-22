@@ -59,7 +59,6 @@ class Unassigned extends AbstractReport
             WHERE a.state IN (:states) AND
                   t.id IN (:templateIds)
             GROUP BY a.personId
-            HAVING c.createdAt = MAX(c.createdAt)
             '
         )
             ->setParameter('states', ['processed'])
