@@ -272,7 +272,7 @@ class Roster extends AbstractReport
                     $relation->tail->gender,
                     $relation->tail->birthdate ? $relation->tail->birthdate->format('Y-m-d') : '',
                     $relation->tail->age,
-                    sprintf('%s (%s)', $person->display_name, $relation->type->name),
+                    sprintf('%s, %s (%s)', $person->family_name, $person->given_name, $relation->type->name),
                     '',
                     '',
                     '',
