@@ -263,8 +263,8 @@ class Roster extends AbstractReport
             foreach ($person->relations as $relation) {
 
                 $ret[] = [
-                    $row[0],
-                    $row[1],
+                    '',
+                    '',
                     '',
                     '',
                     $relation->tail->family_name,
