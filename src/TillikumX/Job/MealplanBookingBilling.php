@@ -63,6 +63,7 @@ class MealplanBookingBilling extends AbstractJob
                 'Billing ID',
                 'Old billed through',
                 'New billed through',
+                'Meal plan',
             )
         );
 
@@ -168,6 +169,7 @@ class MealplanBookingBilling extends AbstractJob
                         $billing->id,
                         $billing->through ? $billing->through->format('Y-m-d'): '',
                         $newThrough->format('Y-m-d'),
+                        $booking->mealplan->name
                     )
                 );
 
