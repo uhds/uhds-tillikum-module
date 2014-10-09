@@ -100,5 +100,25 @@ foreach ($activeFacilityGroups as $row) {
     }
 }
 
+// Now do Scholar Roster
+$report = new \TillikumX\Report\ScholarRoster($tillikumEm);
+
+$report->setParameters(
+    [
+        'date' => $date->format('Y-m-d'),
+    ]
+);
+
+$output = $report->generate();
+
+$outputResource = fopen("{$outputDirectory}/Roster for Scholars.csv", 'wb');
+if (!$outputResource) {
+    exit(1);
+}
+
+foreach ($output as $line) {
+    fputcsv($outputResource, $line);
+}
+
 syslog(LOG_INFO, "finished writing rosters to {$outputDirectory}");
 closelog();
