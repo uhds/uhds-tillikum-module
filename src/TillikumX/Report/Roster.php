@@ -57,6 +57,7 @@ class Roster extends AbstractReport
     {
         $parameters = $this->getParameters();
 
+        $tbc = new \Uhds_View_Helper_TranslateBannerCode();
         $date = new DateTime($parameters['date']);
         $facilityGroupIds = $parameters['facility_groups'];
 
@@ -185,6 +186,7 @@ class Roster extends AbstractReport
                 'Ethnicity Code',
                 'Country of Origin',
                 'Student Type Code',
+                'Class standing',
                 'Primary Major 1',
                 'Hours Registered',
                 'Tags',
@@ -235,6 +237,7 @@ class Roster extends AbstractReport
                 $person->ethnicity_code,
                 $person->origin_country,
                 $person->student_type_code,
+                $tbc->classStanding($person->class_standing),
                 $person->primary_major_1,
                 $person->hours_registered,
                 $tags,
