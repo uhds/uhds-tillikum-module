@@ -89,7 +89,7 @@ class Roster extends AbstractReport
             LEFT JOIN p.addresses campus_address WITH campus_address.type = 'campus'
             LEFT JOIN p.emails directory_email WITH directory_email.type = 'directory'
             LEFT JOIN p.phone_numbers user_phone_number WITH user_phone_number.type = 'user'
-            LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1' 
+            LEFT JOIN p.emergency_contacts ec1 WITH ec1.type = 'ec1'
             LEFT JOIN p.emergency_contacts ec2 WITH ec2.type = 'ec2'
             LEFT JOIN p.tags t
             WHERE fg.id IN (:facilityGroupIds)
@@ -308,4 +308,3 @@ class Roster extends AbstractReport
         return $ret;
     }
 }
-
