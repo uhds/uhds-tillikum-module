@@ -44,6 +44,7 @@ if (mb_strlen($inputFileContents, '8bit') < $saneFileSizeThreshold) {
 }
 
 // Load the XML database
+$inputFileContents = utf8_encode($inputFileContents);
 $students = simplexml_load_string($inputFileContents);
 
 if (!$students) {
