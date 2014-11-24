@@ -17,7 +17,7 @@ $serviceManager = $application->getBootstrap()
 
 $entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
 
-$commonDb = \Uhds_Db::factory('common');
+$commonDb = \Uhds_Db::factory('talend');
 $intoDb = \Uhds_Db::factory('into');
 
 syslog(LOG_INFO, 'starting');
