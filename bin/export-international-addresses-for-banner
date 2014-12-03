@@ -1,0 +1,135 @@
+#!/usr/bin/env php
+<?php
+
+use Zend\Console;
+
+require dirname(dirname(dirname(__DIR__))) . '/autoload.php';
+
+$application = new \Zend_Application(
+    '',
+    APPLICATION_PATH . '/config/application.config.php'
+);
+$application->bootstrap();
+
+$getopt = new Console\Getopt(
+    array(
+        'o=s' => "output PIDMs to this file (default: `-' for STDOUT)",
+    )
+);
+
+try {
+    $outputFile = strlen($getopt->o) > 0 ? $getopt->o : '-';
+} catch (Console\Exception\RuntimeException $e) {
+    echo $e->getUsageMessage();
+
+    exit(1);
+}
+
+openlog(basename(__FILE__), LOG_NDELAY, LOG_LOCAL0);
+syslog(LOG_INFO, 'starting');
+
+$outputResource = $outputFile === '-' ? STDOUT : fopen($outputFile, 'wb');
+if (!$outputResource) {
+    exit(1);
+}
+
+$serviceManager = $application->getBootstrap()
+    ->getResource('ServiceManager');
+
+$entityManager = $serviceManager->get('doctrine.entitymanager.orm_default');
+
+try {
+$rows = $entityManager->createQuery(
+    "
+    SELECT p, 
+        b.checkin_at booking_start,
+        b.end booking_end,
+        p.osuid,
+        p.pidm,
+        p.given_name,
+        p.family_name,
+        rc.name room_name,
+        fgc.name building_name,
+        directory_address.street directory_address_street,
+        directory_address.locality directory_address_locality,
+        directory_address.region directory_address_region,
+        directory_address.postal_code directory_address_postal_code,
+        campus_address.street campus_address_street,
+        campus_address.locality campus_address_locality,
+        campus_address.region campus_address_region,
+        campus_address.postal_code campus_address_postal_code
+    FROM TillikumX\Entity\Person\Person p
+    JOIN p.bookings b WITH :now BETWEEN b.start AND b.end
+    JOIN Tillikum\Entity\Facility\Room\Room r WITH r = b.facility
+    JOIN Tillikum\Entity\Facility\Config\Room\Room rc WITH rc.facility = r AND b.start BETWEEN rc.start AND rc.end
+    JOIN r.facility_group fg
+    JOIN fg.configs fgc WITH b.start BETWEEN fgc.start AND fgc.end
+    LEFT JOIN p.addresses campus_address WITH campus_address.type = 'campus'
+    LEFT JOIN p.addresses directory_address WITH directory_address.type = 'directory'
+    WHERE LENGTH(p.pidm) > 0 AND p.is_international = 1 AND fg.id <> '1011895cf8086e319a20445b38eaf3c0'
+    "
+)
+    ->setParameter('now', new \DateTime())
+    ->getResult();
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
+    exit(0);
+}
+$addressesWritten = 0;
+
+$peopleWithMissingCampusAddress = [];
+foreach ($rows as $row) {
+
+    $streetAddress = str_ireplace(["Oregon State University","\n"], '', $row['campus_address_street']);
+    if (ctype_digit($row['pidm'])
+        && !is_null($row['booking_start']) ) {
+        $address = [
+            $streetAddress,
+            $row['campus_address_locality'],
+            $row['campus_address_region'],
+            $row['campus_address_postal_code'],
+        ];
+        if (stristr('Orchard Court', $row['building_name']) !== false) {
+            $address = [
+                sprintf('3405 NW Orchard Ave Apt %s', $row['room_name']),
+                'Corvallis',
+                'OR',
+                '97330-5195'
+            ];
+        }
+        if (empty($address[0])) {
+            $peopleWithMissingCampusAddress[] = sprintf("%s %s (%s) does not have a campus address", 
+                $row['given_name'],
+                $row['family_name'],
+                $row['osuid']
+            );
+
+            continue;
+        }
+        fputcsv($outputResource, [
+            $row['pidm'],
+            $address[0],
+            $address[1],
+            $address[2],
+            $address[3],
+            $row['room_name'],
+            $row['building_name'],
+            $row['booking_start']->format('d-M-Y'),
+            $row['booking_end']->format('d-M-Y')
+            ]);
+        $addressesWritten++;
+    }
+}
+
+fclose($outputResource);
+
+if (!empty($peopleWithMissingCampusAddress)) {
+    $mail = new \Uhds_Mail();
+    $mail->setSubject('[UHDS] International residents with missing campus addresses')
+        ->addRecipientsFromDatabase('SEVIS\Address\Reporting')
+        ->setBodyText(wordwrap(implode("\n", $peopleWithMissingCampusAddress)))
+        ->send();
+}
+
+syslog(LOG_INFO, "wrote {$addressesWritten} addresses to {$outputFile}");
+closelog();
