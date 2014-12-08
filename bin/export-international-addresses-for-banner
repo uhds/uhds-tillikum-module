@@ -84,10 +84,10 @@ foreach ($rows as $row) {
     if (ctype_digit($row['pidm'])
         && !is_null($row['booking_start']) ) {
         $address = [
-            $streetAddress,
-            $row['campus_address_locality'],
-            $row['campus_address_region'],
-            $row['campus_address_postal_code'],
+            trim($streetAddress),
+            trim($row['campus_address_locality']),
+            trim($row['campus_address_region']),
+            trim($row['campus_address_postal_code']),
         ];
         if (stristr('Orchard Court', $row['building_name']) !== false) {
             $address = [
@@ -106,20 +106,23 @@ foreach ($rows as $row) {
 
             continue;
         }
-        fputcsv($outputResource, [
+
+        $data = [
             $row['pidm'],
             $address[0],
             $address[1],
             $address[2],
             $address[3],
-            $row['room_name'],
-            $row['building_name'],
+            sprintf('%s %s', $row['room_name'], $row['building_name']),
             $row['booking_start']->format('d-M-Y'),
-            $row['booking_end']->format('d-M-Y')
-            ]);
+            $row['booking_end']->format('d-M-Y'),
+        ];
+        
+        fwrite($outputResource, '"' . implode('","', $data) . '"'. "\n");
         $addressesWritten++;
     }
 }
+
 
 fclose($outputResource);
 
