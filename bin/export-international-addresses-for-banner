@@ -66,7 +66,10 @@ $rows = $entityManager->createQuery(
     JOIN fg.configs fgc WITH b.start BETWEEN fgc.start AND fgc.end
     LEFT JOIN p.addresses campus_address WITH campus_address.type = 'campus'
     LEFT JOIN p.addresses directory_address WITH directory_address.type = 'directory'
-    WHERE LENGTH(p.pidm) > 0 AND p.is_international = 1 AND fg.id <> '1011895cf8086e319a20445b38eaf3c0'
+    WHERE LENGTH(p.pidm) > 0 
+    AND p.is_international = 1 
+    AND fg.id <> '1011895cf8086e319a20445b38eaf3c0'
+    AND b.checkout_at IS NULL
     "
 )
     ->setParameter('now', new \DateTime())
