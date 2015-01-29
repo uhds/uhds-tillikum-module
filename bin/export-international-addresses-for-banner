@@ -80,7 +80,6 @@ $rows = $entityManager->createQuery(
 }
 $addressesWritten = 0;
 
-$peopleWithMissingCampusAddress = [];
 foreach ($rows as $row) {
 
     $streetAddress = str_ireplace(["Oregon State University","\n"], '', $row['campus_address_street']);
@@ -101,12 +100,6 @@ foreach ($rows as $row) {
             ];
         }
         if (empty($address[0])) {
-            $peopleWithMissingCampusAddress[] = sprintf("%s %s (%s) does not have a campus address", 
-                $row['given_name'],
-                $row['family_name'],
-                $row['osuid']
-            );
-
             continue;
         }
 
@@ -128,14 +121,6 @@ foreach ($rows as $row) {
 
 
 fclose($outputResource);
-
-if (!empty($peopleWithMissingCampusAddress)) {
-    $mail = new \Uhds_Mail();
-    $mail->setSubject('[UHDS] International residents with missing campus addresses')
-        ->addRecipientsFromDatabase('SEVIS\Address\Reporting')
-        ->setBodyText(wordwrap(implode("\n", $peopleWithMissingCampusAddress)))
-        ->send();
-}
 
 syslog(LOG_INFO, "wrote {$addressesWritten} addresses to {$outputFile}");
 closelog();
