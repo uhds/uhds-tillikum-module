@@ -49,26 +49,21 @@ class TabViewPersonIdCard extends AbstractHelper
                 ->where('osuid = ?', $person->osuid)
         );
 
-        $lastUpdates = $this->commonDb->fetchCol(
+        
+        $proxcardUpdate = $this->commonDb->fetchOne(
             $this->commonDb->select()
-                ->union(
-                    array(
-                        $this->commonDb->select()
-                            ->from('mealplan_balance_job', 'updated'),
-                        $this->commonDb->select()
-                            ->from('proxcard_job', 'updated'),
-                    ),
-                    \Zend_Db_Select::SQL_UNION_ALL
-                )
+                ->from('proxcard_job', 'updated')
         );
+
+        $mealplan_balance_import_time = $this->diningInfoGw->fetchLastBalanceImportTime();
 
         return $this->view->partial(
             '_partials/id_card.phtml',
             array(
                 'balances' => $balances,
                 'prox_number' => $proxNumber,
-                'balances_updated_at' => new DateTime($lastUpdates[0] . 'Z'),
-                'prox_number_updated_at' => new DateTime($lastUpdates[1] . 'Z')
+                'balances_updated_at' => $mealplan_balance_import_time,
+                'prox_number_updated_at' => new DateTime($proxcardUpdate . 'Z')
             )
         );
     }
