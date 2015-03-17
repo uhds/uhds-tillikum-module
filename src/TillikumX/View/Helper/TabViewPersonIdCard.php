@@ -17,12 +17,12 @@ use Zend_View_Helper_Abstract as AbstractHelper;
  */
 class TabViewPersonIdCard extends AbstractHelper
 {
-    protected $commonDb;
+    protected $talendDb;
     protected $diningInfoGw;
 
     public function __construct()
     {
-        $this->commonDb = \Uhds_Db::factory('common');
+        $this->talendDb = \Uhds_Db::factory('talend');
         $this->diningInfoGw = new \Uhds\Model\Dining\InformationGateway();
     }
 
@@ -43,16 +43,15 @@ class TabViewPersonIdCard extends AbstractHelper
             $balances[$balance['plan']] = $balance['balance'];
         }
 
-        $proxNumber = $this->commonDb->fetchOne(
-            $this->commonDb->select()
-                ->from('proxcard', 'card')
-                ->where('osuid = ?', $person->osuid)
+        $proxNumber = $this->talendDb->fetchOne(
+            $this->talendDb->select()
+                ->from('proxcard_info', 'prox_id')
+                ->where('osu_id = ?', $person->osuid)
         );
 
-        
-        $proxcardUpdate = $this->commonDb->fetchOne(
-            $this->commonDb->select()
-                ->from('proxcard_job', 'updated')
+        $proxcardUpdate = $this->talendDb->fetchOne(
+            $this->talendDb->select()
+                ->from('proxcard_info_job', 'updated_at')
         );
 
         $mealplan_balance_import_time = $this->diningInfoGw->fetchLastBalanceImportTime();
