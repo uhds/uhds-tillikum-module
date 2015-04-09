@@ -47,7 +47,6 @@ class OpenSpace extends AbstractReport
             SELECT fgc.name fgname, fc.name fname,
                    fc.capacity, fc.gender,
                    f.id,
-                   CASE WHEN COUNT(tag_ra.id) > 0 THEN 'Y' ELSE 'N' END is_ra,
                    COALESCE(COUNT(bc.id), 0) AS booking_count,
                    COALESCE(SUM(hc.space), 0) AS held_space
             FROM Tillikum\Entity\Facility\Facility f
@@ -56,7 +55,6 @@ class OpenSpace extends AbstractReport
             JOIN fg.configs fgc
             LEFT JOIN f.bookings bc WITH bc.start <= :date AND bc.end >= :date
             LEFT JOIN f.holds hc WITH hc.start <= :date AND hc.end >= :date
-            LEFT JOIN fc.tags tag_ra WITH tag_ra.id = 'ra'
             WHERE fc.start <= :date AND
                   fc.end >= :date AND
                   fgc.start <= :date AND
@@ -84,11 +82,18 @@ class OpenSpace extends AbstractReport
         );
 
         foreach ($spaces as $row) {
+            $facility = $this->em->find('Tillikum\Entity\Facility\Facility', $row['id']);
+            $facilityConfig = $facility->getConfigOnDate($date);
+
+            $tags = $facilityConfig->tags->filter(function($tag) {
+                return (stristr($tag->id, 'ra') !== false);
+            });
+
             $tempRow = array(
                 $row['fgname'],
                 $row['fname'],
                 $row['gender'],
-                $row['is_ra'],
+                !$tags->IsEmpty() ? 'Y' : 'N',
                 $row['capacity'],
                 $row['capacity'] - ($row['booking_count'] + $row['held_space']),
                 '',
